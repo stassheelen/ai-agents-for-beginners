@@ -20,7 +20,7 @@ android {
         versionName = "1.0.0"
 
         // Адреса бекенду за замовчуванням. Можна змінити на планшеті: Налаштування → API URL.
-        buildConfigField("String", "DEFAULT_API_URL", "\"\"")
+        buildConfigField("String", "DEFAULT_API_URL", "\"https://production-time-tracker-api.vercel.app\"")
     }
 
     buildTypes {

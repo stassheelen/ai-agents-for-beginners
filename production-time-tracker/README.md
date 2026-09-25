@@ -116,7 +116,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 Першого запуску достатньо:
 
-1. **Налаштування → API URL**: `https://production-time-tracker-api.vercel.app`.
+1. **Налаштування → API URL**: уже задано за замовчуванням: `https://production-time-tracker-api.vercel.app`.
 2. **Налаштування → Ключ пристрою**: значення з `DEVICE_API_KEYS` на Vercel.
 3. **Налаштування → Device ID**: наприклад, `tablet-001` (генерується автоматично).
 4. **Налаштування → Імпорт CSV / XLSX**: вибрати файл довідника.
@@ -150,6 +150,13 @@ API:
 
 `durationSeconds` заповнюється для подій `*_END` (тривалість обчислює планшет). `recordId` групує
 всі події однієї партії, щоб у SharePoint було зручно рахувати тривалості.
+
+### Розгортання
+
+Проєкт Vercel: `production-time-tracker-api`, адреса `https://production-time-tracker-api.vercel.app`.
+Щоб оновлення з GitHub розгорталися автоматично, у Vercel відкрийте **Settings → Git**,
+підключіть репозиторій і вкажіть **Root Directory** = `production-time-tracker/backend`.
+Інший варіант — з цієї папки: `npx vercel --prod`.
 
 ### Змінні середовища Vercel
 
