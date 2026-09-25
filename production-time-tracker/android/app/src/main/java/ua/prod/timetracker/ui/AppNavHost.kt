@@ -45,6 +45,7 @@ private fun AppContainer.createViewModelFactory(): ViewModelProvider.Factory = v
             syncScheduler = syncScheduler,
             remoteCatalog = remoteCatalogSource,
             fileCatalog = { uri -> fileCatalogSource(uri) },
+            catalogBootstrapper = catalogBootstrapper,
             syncState = syncState,
         )
     }

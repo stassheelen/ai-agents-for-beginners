@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import ua.prod.timetracker.data.repository.CatalogBootstrapper
 import ua.prod.timetracker.data.repository.ServerStatusRepository
 import ua.prod.timetracker.domain.model.ImportParseResult
 import ua.prod.timetracker.domain.model.ProductImportReport
@@ -50,8 +51,12 @@ class SettingsViewModel(
     private val syncScheduler: SyncScheduler,
     private val remoteCatalog: ProductCatalogSource,
     private val fileCatalog: (Uri) -> ProductCatalogSource,
+    private val catalogBootstrapper: CatalogBootstrapper,
     syncState: Flow<SyncState>,
 ) : ViewModel() {
+
+    /** Джерело довідника, що зараз перевіряється (file / server). */
+    private var pendingSource = CatalogBootstrapper.SOURCE_FILE
 
     val state: StateFlow<SettingsUiState> = combine(
         settingsRepository.settings,
@@ -90,10 +95,29 @@ class SettingsViewModel(
     }
 
     /** Імпорт CSV/XLSX: прочитати → перевірити → показати звіт → (після підтвердження) зберегти. */
-    fun importFile(uri: Uri) = load(fileCatalog(uri), "Читання файлу…")
+    fun importFile(uri: Uri) {
+        pendingSource = CatalogBootstrapper.SOURCE_FILE
+        load(fileCatalog(uri), "Читання файлу…")
+    }
 
     /** «Оновити довідник продукції» з сервера (GET /api/products). */
-    fun refreshFromServer() = load(remoteCatalog, "Завантаження довідника з сервера…")
+    fun refreshFromServer() {
+        pendingSource = CatalogBootstrapper.SOURCE_SERVER
+        load(remoteCatalog, "Завантаження довідника з сервера…")
+    }
+
+    /** Повернути довідник, вшитий у додаток. */
+    fun restoreBundled() {
+        viewModelScope.launch {
+            _import.value = ImportState.Loading("Завантаження вбудованого довідника…")
+            val count = catalogBootstrapper.reloadBundled()
+            _import.value = if (count != null) {
+                ImportState.Done("Довідник оновлено. Завантажено ${NumberFormats.positions(count)}.")
+            } else {
+                ImportState.Error("Вбудований довідник недоступний")
+            }
+        }
+    }
 
     fun confirmImport() {
         val preview = _import.value as? ImportState.Preview ?: return
@@ -103,6 +127,7 @@ class SettingsViewModel(
             _import.value = ImportState.Loading("Збереження довідника…")
             _import.value = try {
                 productRepository.replaceAll(products)
+                settingsRepository.setCatalogInfo(pendingSource, null)
                 ImportState.Done(
                     message = "Довідник оновлено. Завантажено ${NumberFormats.positions(products.size)}.",
                     details = "Усього рядків: ${NumberFormats.grouped(report.totalRows)}\n" +

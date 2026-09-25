@@ -28,6 +28,8 @@ class DataStoreSettingsRepository(
             phases = p[PHASES]?.split('\n')?.map { it.trim() }?.filter { it.isNotEmpty() } ?: DEFAULT_PHASES,
             lastSyncAt = p[LAST_SYNC_AT],
             lastSyncError = p[LAST_SYNC_ERROR],
+            catalogSource = p[CATALOG_SOURCE],
+            catalogVersion = p[CATALOG_VERSION],
         )
     }
 
@@ -64,6 +66,13 @@ class DataStoreSettingsRepository(
         }
     }
 
+    override suspend fun setCatalogInfo(source: String, version: String?) {
+        dataStore.edit { p ->
+            p[CATALOG_SOURCE] = source
+            if (version == null) p.remove(CATALOG_VERSION) else p[CATALOG_VERSION] = version
+        }
+    }
+
     companion object {
         private val DEVICE_ID = stringPreferencesKey("device_id")
         private val API_URL = stringPreferencesKey("api_url")
@@ -71,6 +80,8 @@ class DataStoreSettingsRepository(
         private val PHASES = stringPreferencesKey("phases")
         private val LAST_SYNC_AT = stringPreferencesKey("last_sync_at")
         private val LAST_SYNC_ERROR = stringPreferencesKey("last_sync_error")
+        private val CATALOG_SOURCE = stringPreferencesKey("catalog_source")
+        private val CATALOG_VERSION = stringPreferencesKey("catalog_version")
 
         val DEFAULT_PHASES = listOf(
             "Фаза 10 — Формування",

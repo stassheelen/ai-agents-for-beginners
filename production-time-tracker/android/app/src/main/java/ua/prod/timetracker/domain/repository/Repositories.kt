@@ -64,6 +64,10 @@ data class AppSettings(
     val phases: List<String>,
     val lastSyncAt: String?,
     val lastSyncError: String?,
+    /** Звідки завантажено довідник: bundled | file | server (null — ще не завантажувався). */
+    val catalogSource: String? = null,
+    /** Відбиток вбудованого довідника, щоб оновлювати його разом з новою версією APK. */
+    val catalogVersion: String? = null,
 )
 
 interface SettingsRepository {
@@ -75,4 +79,5 @@ interface SettingsRepository {
     suspend fun setApiKey(value: String)
     suspend fun setPhases(value: List<String>)
     suspend fun setSyncResult(at: String?, error: String?)
+    suspend fun setCatalogInfo(source: String, version: String?)
 }

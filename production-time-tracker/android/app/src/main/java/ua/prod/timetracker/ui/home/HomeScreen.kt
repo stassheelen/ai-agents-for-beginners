@@ -463,27 +463,43 @@ private fun ActionGrid(
 
 @Composable
 private fun BottomStatusBar(state: HomeUiState) {
-    Row(
+    val last = state.lastEvent
+    val lastText = if (last != null) {
+        "Остання подія: ${last.eventType.feedbackLabel} ${TimeFormats.localTime(last.timestamp)}"
+    } else {
+        "Подій ще немає"
+    }
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .background(Palette.Surface)
-            .padding(horizontal = 24.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = 24.dp, vertical = 12.dp),
     ) {
-        val last = state.lastEvent
-        Text(
-            text = if (last != null) {
-                "Остання подія: ${last.eventType.feedbackLabel} ${TimeFormats.localTime(last.timestamp)}"
-            } else {
-                "Подій ще немає"
-            },
-            style = MaterialTheme.typography.bodyLarge,
-            color = Palette.TextSecondary,
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        SyncSummary(state.sync)
+        if (maxWidth < 700.dp) {
+            // Вертикальний планшет: два рядки, щоб нічого не обрізалось.
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    lastText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Palette.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                SyncSummary(state.sync)
+            }
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    lastText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Palette.TextSecondary,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                SyncSummary(state.sync)
+            }
+        }
     }
 }
 

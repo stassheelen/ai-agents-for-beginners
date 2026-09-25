@@ -15,8 +15,8 @@
 
         <!--
             Android 16 на великих екранах ігнорує фіксовану орієнтацію для targetSdk 36.
-            Тимчасово зберігаємо landscape для виробничого планшета; інтерфейс
-            при цьому адаптивний і коректно працює також у portrait.
+            Цей прапорець зберігає вертикальну (portrait) орієнтацію на виробничому планшеті;
+            інтерфейс при цьому адаптивний і коректно працює також у landscape.
         -->
         <property
             android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY"
@@ -25,7 +25,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:screenOrientation="sensorLandscape"
+            android:screenOrientation="sensorPortrait"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -20,6 +20,8 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import ua.prod.timetracker.BuildConfig
 import ua.prod.timetracker.data.local.database.AppDatabase
 import ua.prod.timetracker.data.remote.api.TimeTrackerApi
+import ua.prod.timetracker.data.repository.BundledProductCatalogSource
+import ua.prod.timetracker.data.repository.CatalogBootstrapper
 import ua.prod.timetracker.data.repository.DataStoreSettingsRepository
 import ua.prod.timetracker.data.repository.FileProductCatalogSource
 import ua.prod.timetracker.data.repository.RemoteProductCatalogSource
@@ -101,6 +103,10 @@ class AppContainer(private val app: Application) {
 
     val eventSyncer: EventSyncer by lazy { EventSyncer(database.eventDao(), api, settingsRepository) }
 
+    val catalogBootstrapper: CatalogBootstrapper by lazy {
+        CatalogBootstrapper(productRepository, settingsRepository, BundledProductCatalogSource(app.assets))
+    }
+
     val remoteCatalogSource: ProductCatalogSource by lazy { RemoteProductCatalogSource(api, settingsRepository) }
 
     val serverStatusRepository: ServerStatusRepository by lazy { ServerStatusRepository(api, settingsRepository) }
@@ -123,6 +129,8 @@ class AppContainer(private val app: Application) {
     fun start() {
         syncScheduler.schedulePeriodic()
         appScope.launch { settingsRepository.ensureDeviceId() }
+        // Вшитий довідник: при першому запуску довідник уже готовий, імпорт не потрібен.
+        appScope.launch { catalogBootstrapper.ensureCatalog() }
         // З'явився інтернет → одразу відправляємо накопичені події.
         appScope.launch {
             networkMonitor.isOnline.filter { it }.collect { syncScheduler.syncNow() }

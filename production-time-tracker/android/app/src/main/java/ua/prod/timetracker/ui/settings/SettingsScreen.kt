@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.NetworkCheck
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.CircularProgressIndicator
@@ -160,6 +161,16 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     AppCard(Modifier.fillMaxWidth()) {
                         SectionTitle("Довідник продукції")
                         BigNumber("Позицій у довіднику", state.productCount, Modifier.fillMaxWidth(), Palette.TextPrimary)
+                        Text(
+                            "Джерело: " + when (settings.catalogSource) {
+                                "bundled" -> "вбудований у додаток"
+                                "file" -> "імпортований файл"
+                                "server" -> "сервер"
+                                else -> "—"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Palette.TextSecondary,
+                        )
                         VSpace(12.dp)
                         PrimaryButton(
                             "Імпорт CSV / XLSX",
@@ -173,6 +184,13 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                             onClick = viewModel::refreshFromServer,
                             icon = Icons.Filled.CloudDownload,
                             enabled = settings.apiUrl.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        VSpace(10.dp)
+                        SecondaryButton(
+                            "Відновити вбудований довідник",
+                            onClick = viewModel::restoreBundled,
+                            icon = Icons.Filled.Restore,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         VSpace(6.dp)

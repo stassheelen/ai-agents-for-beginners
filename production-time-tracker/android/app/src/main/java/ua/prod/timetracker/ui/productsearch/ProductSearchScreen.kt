@@ -184,7 +184,7 @@ private fun SearchResults(
             SingleResultCard(state.results.first(), query, onClick = { onSelect(state.results.first()) })
         }
         else -> LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 300.dp),
+            columns = GridCells.Adaptive(minSize = 250.dp),
             modifier = modifier.fillMaxWidth(),
             contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),

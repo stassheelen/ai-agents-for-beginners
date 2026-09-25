@@ -1,6 +1,7 @@
 package ua.prod.timetracker.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -71,9 +72,9 @@ fun SetupDialog(
                 Text(record.product.headline, style = MaterialTheme.typography.headlineSmall)
                 Text(record.product.type, style = MaterialTheme.typography.bodyLarge, color = Palette.TextSecondary, maxLines = 1)
                 VSpace(16.dp)
-                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                    // Кількість
-                    Column(Modifier.weight(1f)) {
+                // Кількість
+                val quantitySection = @Composable { m: Modifier ->
+                    Column(m) {
                         FieldLabel("Кількість, кг")
                         VSpace(6.dp)
                         Surface(
@@ -99,14 +100,10 @@ fun SetupDialog(
                             onBackspace = { quantity = quantity.backspace() },
                         )
                     }
-                    // Фаза + коментар
-                    Column(
-                        Modifier
-                            .weight(1.1f)
-                            .heightIn(max = 420.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
+                }
+                // Фаза + коментар
+                val phaseSection = @Composable { m: Modifier ->
+                    Column(m, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         FieldLabel("Фаза виробництва")
                         if (!canChangePhase) {
                             Text(
@@ -152,6 +149,23 @@ fun SetupDialog(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
                         )
+                    }
+                }
+                BoxWithConstraints(Modifier.weight(1f, fill = false)) {
+                    if (maxWidth >= 760.dp) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                            quantitySection(Modifier.weight(1f))
+                            phaseSection(Modifier.weight(1.1f).heightIn(max = 420.dp).verticalScroll(rememberScrollState()))
+                        }
+                    } else {
+                        // Вертикальний планшет: клавіатура зверху, фази під нею, кнопки закріплені внизу.
+                        Column(
+                            Modifier.verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(20.dp),
+                        ) {
+                            quantitySection(Modifier.fillMaxWidth())
+                            phaseSection(Modifier.fillMaxWidth())
+                        }
                     }
                 }
                 VSpace(20.dp)
