@@ -1,3 +1,4 @@
+import { EVENT_COLUMNS } from "./columns";
 import type { GraphConfig } from "./config";
 import { GraphClient, GraphError, graphErrorMessage, type BatchRequest } from "./graph";
 import type {
@@ -44,6 +45,7 @@ const odataString = (value: string) => value.replace(/'/g, "''");
  */
 export class SharePointEventStore implements EventStore {
   private siteIdPromise: Promise<string> | null = null;
+  private eventsListPromise: Promise<string> | null = null;
 
   constructor(
     private readonly config: GraphConfig,
@@ -70,8 +72,45 @@ export class SharePointEventStore implements EventStore {
     return `/sites/${await this.siteId()}/lists/${encodeURIComponent(list)}`;
   }
 
+  /**
+   * Шлях до списку подій. Якщо списку ще немає — створює його з усіма колонками,
+   * тож окремо запускати скрипт provision не обов'язково.
+   */
+  private eventsListPath(): Promise<string> {
+    if (!this.eventsListPromise) {
+      this.eventsListPromise = this.ensureEventsList().catch((e) => {
+        this.eventsListPromise = null;
+        throw e;
+      });
+    }
+    return this.eventsListPromise;
+  }
+
+  private async ensureEventsList(): Promise<string> {
+    const path = await this.listPath(this.config.eventsList);
+    try {
+      await this.graph.request("GET", `${path}?$select=id`);
+      return path;
+    } catch (e) {
+      if (!(e instanceof GraphError && e.status === 404)) throw e;
+    }
+    try {
+      const created = await this.graph.request<{ id: string }>("POST", `/sites/${await this.siteId()}/lists`, {
+        displayName: this.config.eventsList,
+        columns: EVENT_COLUMNS,
+        list: { template: "genericList" },
+      });
+      console.info(`SharePoint: створено список «${this.config.eventsList}» (${created.id})`);
+      return `/sites/${await this.siteId()}/lists/${created.id}`;
+    } catch (e) {
+      // Паралельний запит встиг створити список раніше.
+      if (e instanceof GraphError && e.status === 409) return path;
+      throw e;
+    }
+  }
+
   async findExisting(eventIds: string[]): Promise<Map<string, ExistingItem>> {
-    const base = await this.listPath(this.config.eventsList);
+    const base = await this.eventsListPath();
     const requests: BatchRequest[] = eventIds.map((id, i) => ({
       id: String(i),
       method: "GET",
@@ -100,7 +139,7 @@ export class SharePointEventStore implements EventStore {
   }
 
   async create(events: ProductionEvent[]): Promise<Map<string, CreateOutcome>> {
-    const base = await this.listPath(this.config.eventsList);
+    const base = await this.eventsListPath();
     const requests: BatchRequest[] = events.map((e, i) => ({
       id: String(i),
       method: "POST",
@@ -127,7 +166,7 @@ export class SharePointEventStore implements EventStore {
   }
 
   async updateComments(items: { itemId: string; event: ProductionEvent }[]): Promise<Map<string, UpdateOutcome>> {
-    const base = await this.listPath(this.config.eventsList);
+    const base = await this.eventsListPath();
     const requests: BatchRequest[] = items.map(({ itemId, event }, i) => ({
       id: String(i),
       method: "PATCH",
@@ -179,7 +218,7 @@ export class SharePointEventStore implements EventStore {
     try {
       const list = await this.graph.request<{ displayName?: string }>(
         "GET",
-        `${await this.listPath(this.config.eventsList)}?$select=displayName`,
+        `${await this.eventsListPath()}?$select=displayName`,
       );
       return { configured: true, ok: true, listName: list.displayName ?? this.config.eventsList };
     } catch (e) {

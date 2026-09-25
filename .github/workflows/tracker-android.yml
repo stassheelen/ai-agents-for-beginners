@@ -1,0 +1,87 @@
+name: Фіксатор часу — Android APK
+
+on:
+  push:
+    branches: [claude/festive-knuth-nvpfzo, main]
+    paths:
+      - "production-time-tracker/android/**"
+      - ".github/workflows/tracker-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tracker-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: production-time-tracker/android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Стабільний ключ підпису між збірками, щоб новий APK ставився поверх старого.
+      # Якщо задано секрети ANDROID_KEYSTORE_*, використовуються вони (надійніше за кеш).
+      - name: Restore debug keystore
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: tracker-debug-keystore-v1
+
+      - name: Signing key from secrets (optional)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/signing.jks"
+            echo "ANDROID_SIGNING_STORE_FILE=$RUNNER_TEMP/signing.jks" >> "$GITHUB_ENV"
+          fi
+
+      - name: Unit tests and APK
+        env:
+          ANDROID_SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDebug
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/fiksator-chasu.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fiksator-chasu-apk
+          path: ${{ runner.temp }}/fiksator-chasu.apk
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: production-time-tracker/android/app/build/reports/
+
+      # Постійне посилання для планшета:
+      # https://github.com/<owner>/<repo>/releases/download/tracker-apk-latest/fiksator-chasu.apk
+      - name: Publish release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete tracker-apk-latest --yes --cleanup-tag || true
+          gh release create tracker-apk-latest "$RUNNER_TEMP/fiksator-chasu.apk" \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Фіксатор часу 1.0.$GITHUB_RUN_NUMBER" \
+            --notes "Автоматична збірка з гілки $GITHUB_REF_NAME ($GITHUB_SHA). Відкрийте це посилання на планшеті та встановіть APK."

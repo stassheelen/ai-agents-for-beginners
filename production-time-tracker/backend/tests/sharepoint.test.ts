@@ -13,9 +13,11 @@ const config = {
 };
 
 /** Імітація Graph: токен, пошук сайту та $batch зі списком з унікальним EventId. */
-function fakeGraph() {
+function fakeGraph(listExists = true) {
   const items = new Map<string, Record<string, unknown>>();
   const calls: string[] = [];
+  const lists = new Map<string, { id: string; columns: unknown[] }>();
+  if (listExists) lists.set("ProductionEvents", { id: "list-1", columns: [] });
   const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
     calls.push(`${init?.method ?? "GET"} ${url}`);
@@ -24,6 +26,19 @@ function fakeGraph() {
     }
     if (url.includes("/sites/contoso.sharepoint.com:/sites/Production")) {
       return Response.json({ id: "site-1" });
+    }
+    const listMatch = /\/sites\/site-1\/lists\/([^/?]+)\?\$select=/.exec(url);
+    if (listMatch && (init?.method ?? "GET") === "GET") {
+      const key = decodeURIComponent(listMatch[1]);
+      const list = lists.get(key) ?? [...lists.values()].find((l) => l.id === key);
+      return list
+        ? Response.json({ id: list.id, displayName: "ProductionEvents" })
+        : Response.json({ error: { message: "List not found" } }, { status: 404 });
+    }
+    if (url.endsWith("/sites/site-1/lists") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body));
+      lists.set(body.displayName, { id: "list-new", columns: body.columns });
+      return Response.json({ id: "list-new" }, { status: 201 });
     }
     if (url.endsWith("/$batch")) {
       const { requests } = JSON.parse(String(init!.body));
@@ -47,7 +62,7 @@ function fakeGraph() {
     }
     return Response.json({ error: { message: "unexpected " + url } }, { status: 404 });
   }) as typeof fetch;
-  return { items, calls, fetchImpl };
+  return { items, calls, lists, fetchImpl };
 }
 
 describe("SharePointEventStore", () => {
@@ -72,5 +87,18 @@ describe("SharePointEventStore", () => {
 
     const found = await store.findExisting([events[0].eventId, "00000000-0000-4000-8000-000000000000"]);
     expect(found.size).toBe(1);
+  });
+
+  it("creates the events list with a unique EventId column when it does not exist", async () => {
+    const g = fakeGraph(false);
+    const store = new SharePointEventStore(config, new GraphClient(config, g.fetchImpl));
+    const health = await store.health();
+    expect(health.ok).toBe(true);
+    const created = g.lists.get("ProductionEvents")!;
+    expect(created.id).toBe("list-new");
+    expect(created.columns).toContainEqual(expect.objectContaining({ name: "EventId", enforceUniqueValues: true }));
+
+    await store.create([EventSchema.parse(makeEvent())]);
+    expect(g.calls.filter((c) => c.startsWith("POST") && c.endsWith("/lists"))).toHaveLength(1);
   });
 });

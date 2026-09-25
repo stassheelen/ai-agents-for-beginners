@@ -105,13 +105,25 @@ production-time-tracker/
 
 ## Збірка й встановлення Android-додатка
 
-Потрібні Android Studio (Narwhal або новіша) або JDK 17+ з Android SDK 36.
+**Готовий APK** збирає GitHub Actions (`.github/workflows/tracker-android.yml`) після кожної зміни
+в `android/`. Постійне посилання для планшета:
+
+https://github.com/stassheelen/ai-agents-for-beginners/releases/download/tracker-apk-latest/fiksator-chasu.apk
+
+Відкрийте його в браузері планшета → «Завантажити» → відкрити файл → дозволити встановлення.
+Новий APK ставиться поверх старого, дані не губляться.
+
+> Ключ підпису APK між збірками зберігається в кеші GitHub Actions. Для повної надійності
+> додайте секрети репозиторію `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+> `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` (Settings → Secrets and variables → Actions).
+> Після зміни ключа попередній APK треба один раз видалити перед встановленням нового.
+
+Локальна збірка (Android Studio Narwhal+ або JDK 17 + Android SDK 36):
 
 ```bash
 cd production-time-tracker/android
 ./gradlew assembleDebug          # APK: app/build/outputs/apk/debug/app-debug.apk
 ./gradlew testDebugUnitTest      # юніт-тести логіки (стан кнопок, імпорт, пошук, формати)
-adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 Першого запуску достатньо:
@@ -176,7 +188,8 @@ API:
 3. Для `Sites.Selected` видайте застосунку доступ `write` до потрібного сайту
    (`POST /sites/{site-id}/permissions`, або PnP: `Grant-PnPAzureADAppSitePermission`).
 4. **Certificates & secrets → New client secret**. Значення внесіть у Vercel (`AZURE_CLIENT_SECRET`).
-5. Створіть список і колонки:
+5. Список `ProductionEvents` з усіма колонками бекенд **створює сам** при першому зверненні
+   (для `Sites.Selected` потрібна роль `manage` на сайті). За бажання його можна створити заздалегідь:
 
    ```bash
    cd production-time-tracker/backend

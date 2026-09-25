@@ -16,14 +16,34 @@ android {
         applicationId = "ua.prod.timetracker"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        // На CI — номер збірки GitHub Actions, щоб кожен новий APK встановлювався як оновлення.
+        val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+        versionCode = buildNumber
+        versionName = "1.0.$buildNumber"
 
         // Адреса бекенду за замовчуванням. Можна змінити на планшеті: Налаштування → API URL.
         buildConfigField("String", "DEFAULT_API_URL", "\"https://production-time-tracker-api.vercel.app\"")
     }
 
+    // Ключ підпису не зберігається в репозиторії. Якщо задано змінні середовища
+    // (секрети CI) — ними підписуються всі збірки; інакше використовується стандартний
+    // debug-ключ (~/.android/debug.keystore), який CI зберігає між збірками в кеші.
+    val signingStore = System.getenv("ANDROID_SIGNING_STORE_FILE")
+    if (signingStore != null) {
+        signingConfigs {
+            create("ci") {
+                storeFile = file(signingStore)
+                storePassword = System.getenv("ANDROID_SIGNING_STORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_SIGNING_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_SIGNING_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
+        if (signingStore != null) {
+            getByName("debug") { signingConfig = signingConfigs.getByName("ci") }
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
