@@ -31,28 +31,49 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      # Стабільний ключ підпису між збірками, щоб новий APK ставився поверх старого.
-      # Якщо задано секрети ANDROID_KEYSTORE_*, використовуються вони (надійніше за кеш).
-      - name: Restore debug keystore
+      # Стабільний ключ підпису між збірками, щоб новий APK ставився поверх старого
+      # (без видалення додатка й без втрати ще не відправлених подій).
+      # Якщо задано секрети ANDROID_KEYSTORE_*, використовуються вони (найнадійніше).
+      # Інакше ключ генерується один раз і зберігається в кеші GitHub Actions (не в репозиторії).
+      - name: Restore signing keystore
         uses: actions/cache@v4
         with:
-          path: ~/.android/debug.keystore
-          key: tracker-debug-keystore-v1
+          path: ~/tracker-signing
+          key: tracker-signing-keystore-v1
 
-      - name: Signing key from secrets (optional)
+      - name: Prepare signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/signing.jks"
-            echo "ANDROID_SIGNING_STORE_FILE=$RUNNER_TEMP/signing.jks" >> "$GITHUB_ENV"
+            {
+              echo "ANDROID_SIGNING_STORE_FILE=$RUNNER_TEMP/signing.jks"
+              echo "ANDROID_SIGNING_STORE_PASSWORD=$KEYSTORE_PASSWORD"
+              echo "ANDROID_SIGNING_KEY_ALIAS=$KEY_ALIAS"
+              echo "ANDROID_SIGNING_KEY_PASSWORD=$KEY_PASSWORD"
+            } >> "$GITHUB_ENV"
+          else
+            # Стандартні параметри Android debug-ключа.
+            mkdir -p ~/tracker-signing
+            if [ ! -f ~/tracker-signing/debug.jks ]; then
+              keytool -genkeypair -keystore ~/tracker-signing/debug.jks -alias androiddebugkey \
+                -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+                -dname "CN=Android Debug,O=Android,C=US"
+              echo "::notice::Створено новий ключ підпису APK"
+            fi
+            {
+              echo "ANDROID_SIGNING_STORE_FILE=$HOME/tracker-signing/debug.jks"
+              echo "ANDROID_SIGNING_STORE_PASSWORD=android"
+              echo "ANDROID_SIGNING_KEY_ALIAS=androiddebugkey"
+              echo "ANDROID_SIGNING_KEY_PASSWORD=android"
+            } >> "$GITHUB_ENV"
           fi
 
       - name: Unit tests and APK
-        env:
-          ANDROID_SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDebug
 
       - name: Rename APK
