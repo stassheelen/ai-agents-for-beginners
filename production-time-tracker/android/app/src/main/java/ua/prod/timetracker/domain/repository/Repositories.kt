@@ -1,12 +1,13 @@
 package ua.prod.timetracker.domain.repository
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
+import ua.prod.timetracker.domain.model.ActiveRecordState
 import ua.prod.timetracker.domain.model.EventType
 import ua.prod.timetracker.domain.model.ImportParseResult
 import ua.prod.timetracker.domain.model.Product
 import ua.prod.timetracker.domain.model.ProductionEvent
 import ua.prod.timetracker.domain.model.ProductionRecord
-import ua.prod.timetracker.domain.model.WorkState
 import java.time.Instant
 
 interface ProductRepository {
@@ -28,26 +29,37 @@ sealed interface RecordEventResult {
     data class Rejected(val reason: String) : RecordEventResult
 }
 
-sealed interface SelectProductResult {
-    data class Selected(val record: ProductionRecord) : SelectProductResult
-    data class Rejected(val reason: String) : SelectProductResult
-}
-
 interface ProductionRepository {
-    val activeRecord: Flow<ProductionRecord?>
-    val workState: Flow<WorkState>
+    /** Уся продукція на екрані зі станом кнопок кожної. */
+    val activeRecords: Flow<List<ActiveRecordState>>
     val lastEvent: Flow<ProductionEvent?>
     val pendingCount: Flow<Int>
     val failedCount: Flow<Int>
+
+    /** recordId щойно доданої продукції — щоб одразу відкрити введення кг і фази. */
+    val newlyAddedRecordId: StateFlow<String?>
+    fun consumeNewlyAdded()
+
     fun recentProducts(limit: Int): Flow<List<Product>>
-    fun eventsForRecord(recordId: String): Flow<List<ProductionEvent>>
+    fun eventsForActiveRecords(): Flow<List<ProductionEvent>>
     fun eventsSince(from: Instant): Flow<List<ProductionEvent>>
 
-    suspend fun selectProduct(product: Product): SelectProductResult
-    suspend fun updateSetup(quantityKg: Double, phase: String, comment: String?)
+    /** Додає продукцію на екран (якщо вона вже там — просто розгортає її картку). */
+    suspend fun addProduct(product: Product): ProductionRecord
+    suspend fun updateSetup(recordId: String, quantityKg: Double, phase: String, comment: String?)
+    suspend fun setCollapsed(recordId: String, collapsed: Boolean)
 
-    /** Створює подію з поточним часом. Перевіряє допустимість послідовності в транзакції. */
-    suspend fun recordEvent(type: EventType, downtimeReason: String? = null, comment: String? = null): RecordEventResult
+    /** Прибирає картку з екрана (дані зберігаються). Можна лише коли по продукції нічого не йде. */
+    suspend fun closeRecord(recordId: String): String?
+
+    /** Створює подію з поточним часом для конкретної продукції. Перевіряє послідовність у транзакції. */
+    suspend fun recordEvent(
+        recordId: String,
+        type: EventType,
+        downtimeReason: String? = null,
+        comment: String? = null,
+    ): RecordEventResult
+
     suspend fun updateEventComment(eventId: String, comment: String?)
 }
 

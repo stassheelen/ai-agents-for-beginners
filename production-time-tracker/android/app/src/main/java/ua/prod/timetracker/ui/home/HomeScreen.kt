@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -20,11 +22,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Pause
@@ -59,11 +66,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ua.prod.timetracker.domain.model.ActiveActivity
+import ua.prod.timetracker.domain.model.ActiveRecordState
 import ua.prod.timetracker.domain.model.EventType
-import ua.prod.timetracker.domain.model.ProductionRecord
 import ua.prod.timetracker.domain.model.SyncState
 import ua.prod.timetracker.domain.model.TransitionCheck
 import ua.prod.timetracker.ui.components.AppCard
+import ua.prod.timetracker.ui.components.AppDialog
 import ua.prod.timetracker.ui.components.AppTopBar
 import ua.prod.timetracker.ui.components.BigActionButton
 import ua.prod.timetracker.ui.components.Dot
@@ -88,13 +96,21 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     val feedback by viewModel.feedback.collectAsStateWithLifecycle()
-    var showSetup by rememberSaveable { mutableStateOf(false) }
-    var showDowntime by rememberSaveable { mutableStateOf(false) }
+    val newlyAdded by viewModel.newlyAddedRecordId.collectAsStateWithLifecycle()
+    var setupFor by rememberSaveable { mutableStateOf<String?>(null) }
+    var downtimeFor by rememberSaveable { mutableStateOf<String?>(null) }
+    var closeFor by rememberSaveable { mutableStateOf<String?>(null) }
+    val listState = rememberLazyListState()
 
-    // Щойно вибрали нову продукцію — одразу пропонуємо ввести кількість і фазу.
-    val record = state.record
-    LaunchedEffect(record?.recordId) {
-        if (record != null && !record.isSetupComplete) showSetup = true
+    // Щойно додали продукцію — одразу пропонуємо ввести кількість і фазу та прокручуємо до неї.
+    LaunchedEffect(newlyAdded, state.records.size) {
+        val id = newlyAdded ?: return@LaunchedEffect
+        val index = state.records.indexOfFirst { it.record.recordId == id }
+        if (index >= 0) {
+            setupFor = id
+            viewModel.consumeNewlyAdded()
+            listState.animateScrollToItem(index)
+        }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -104,61 +120,52 @@ fun HomeScreen(
                 subtitle = "Фіксатор часу",
                 syncState = state.sync,
                 actions = {
+                    IconButton(onClick = onOpenJournal, modifier = Modifier.size(56.dp)) {
+                        Icon(Icons.Filled.History, contentDescription = "Журнал подій", tint = Palette.TextSecondary, modifier = Modifier.size(30.dp))
+                    }
                     IconButton(onClick = onOpenSettings, modifier = Modifier.size(56.dp)) {
-                        Icon(
-                            Icons.Filled.Settings,
-                            contentDescription = "Налаштування",
-                            tint = Palette.TextSecondary,
-                            modifier = Modifier.size(30.dp),
-                        )
+                        Icon(Icons.Filled.Settings, contentDescription = "Налаштування", tint = Palette.TextSecondary, modifier = Modifier.size(30.dp))
                     }
                 },
             )
             when {
                 !state.loaded -> Spacer(Modifier.weight(1f))
-                record == null -> EmptyHome(
+                state.records.isEmpty() -> EmptyHome(
                     productCount = state.productCount,
                     onSelectProduct = onSelectProduct,
                     onOpenSettings = onOpenSettings,
                     modifier = Modifier.weight(1f),
                 )
-                else -> BoxWithConstraints(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                else -> LazyColumn(
+                    state = listState,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    val wide = maxWidth >= 800.dp && maxWidth > maxHeight
-                    val info = @Composable { m: Modifier ->
-                        InfoPane(
-                            state = state,
-                            record = record,
-                            onChangeProduct = onSelectProduct,
-                            onEditSetup = { showSetup = true },
-                            modifier = m,
-                        )
-                    }
-                    val actions = @Composable { m: Modifier ->
-                        ActionGrid(
-                            state = state,
-                            busy = busy,
+                    items(state.records, key = { it.record.recordId }) { item ->
+                        RecordCard(
+                            item = item,
+                            busy = busy != null,
+                            onToggle = { viewModel.toggleCollapsed(item.record.recordId) },
+                            onClose = { closeFor = item.record.recordId },
+                            onEditSetup = { setupFor = item.record.recordId },
                             onAction = { type ->
-                                if (type == EventType.DOWNTIME_START) showDowntime = true else viewModel.record(type)
+                                if (type == EventType.DOWNTIME_START) {
+                                    downtimeFor = item.record.recordId
+                                } else {
+                                    viewModel.record(item.record.recordId, type)
+                                }
                             },
                             onOpenJournal = onOpenJournal,
-                            modifier = m,
                         )
                     }
-                    if (wide) {
-                        Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            info(Modifier.weight(0.42f).fillMaxHeight())
-                            actions(Modifier.weight(0.58f).fillMaxHeight().padding(bottom = 8.dp))
-                        }
-                    } else {
-                        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            info(Modifier.fillMaxWidth())
-                            actions(Modifier.weight(1f).fillMaxWidth().padding(bottom = 8.dp))
-                        }
+                    item(key = "add") {
+                        SecondaryButton(
+                            text = "ДОДАТИ ПРОДУКЦІЮ",
+                            onClick = onSelectProduct,
+                            icon = Icons.Filled.Add,
+                            modifier = Modifier.fillMaxWidth().height(72.dp),
+                        )
                     }
                 }
             }
@@ -175,26 +182,54 @@ fun HomeScreen(
         }
     }
 
-    if (showSetup && record != null) {
-        SetupDialog(
-            record = record,
-            phases = state.phases,
-            canChangePhase = state.workState.canChangePhase,
-            onDismiss = { showSetup = false },
-            onConfirm = { quantity, phase, comment ->
-                viewModel.saveSetup(quantity, phase, comment)
-                showSetup = false
+    setupFor?.let { id ->
+        val item = state.record(id)
+        if (item == null) {
+            setupFor = null
+        } else {
+            SetupDialog(
+                record = item.record,
+                phases = state.phases,
+                canChangePhase = item.workState.canChangePhase,
+                onDismiss = { setupFor = null },
+                onConfirm = { quantity, phase, comment ->
+                    viewModel.saveSetup(id, quantity, phase, comment)
+                    setupFor = null
+                },
+            )
+        }
+    }
+    downtimeFor?.let { id ->
+        DowntimeDialog(
+            onDismiss = { downtimeFor = null },
+            onConfirm = { reason, comment ->
+                downtimeFor = null
+                viewModel.record(id, EventType.DOWNTIME_START, reason, comment)
             },
         )
     }
-    if (showDowntime) {
-        DowntimeDialog(
-            onDismiss = { showDowntime = false },
-            onConfirm = { reason, comment ->
-                showDowntime = false
-                viewModel.record(EventType.DOWNTIME_START, reason, comment)
-            },
-        )
+    closeFor?.let { id ->
+        val item = state.record(id)
+        AppDialog(onDismiss = { closeFor = null }, title = "Прибрати продукцію з екрана?") {
+            Text(
+                listOfNotNull(item?.record?.product?.headline, item?.record?.product?.type).joinToString(" · ") +
+                    "\nУсі події збережено — їх видно в журналі та в таблиці.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Palette.TextSecondary,
+            )
+            VSpace(20.dp)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { closeFor = null }) { Text("Скасувати", style = MaterialTheme.typography.titleSmall) }
+                Spacer(Modifier.width(12.dp))
+                PrimaryButton(
+                    text = "ПРИБРАТИ",
+                    onClick = {
+                        viewModel.closeRecord(id)
+                        closeFor = null
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -248,137 +283,165 @@ private fun EmptyHome(
     }
 }
 
-@Composable
-private fun InfoPane(
-    state: HomeUiState,
-    record: ProductionRecord,
-    onChangeProduct: () -> Unit,
-    onEditSetup: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val blockReason = state.workState.productChangeBlockReason()
-    Column(
-        modifier = modifier.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        AppCard(modifier = Modifier.fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    FieldLabel("SKU")
-                    Text(record.product.sku, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                Column(Modifier.weight(1.3f)) {
-                    FieldLabel("Артикул")
-                    Text(
-                        record.product.article.ifBlank { "—" },
-                        style = MaterialTheme.typography.titleLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                TextButton(onClick = onChangeProduct, enabled = blockReason == null) {
-                    Text("Змінити", style = MaterialTheme.typography.titleSmall)
-                }
-            }
-            VSpace(10.dp)
-            FieldLabel("Вид")
-            Text(
-                record.product.type,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Normal,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            record.product.group?.let {
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary, maxLines = 1)
-            }
-            if (blockReason != null) {
-                Text(
-                    "Змінити продукцію: ${blockReason.lowercase()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Palette.TextTertiary,
-                )
-            }
-        }
+/** Короткий статус продукції: колір, назва стану й таймер. */
+private data class StatusInfo(val color: Color, val label: String, val timer: String?)
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            AppCard(modifier = Modifier.weight(1f), onClick = onEditSetup, contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp)) {
-                FieldLabel("Кількість")
-                val q = record.quantityKg
-                if (q != null) {
-                    Text(NumberFormats.quantityKg(q), fontSize = 30.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                } else {
-                    Text("Вказати", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, color = Palette.Blue)
-                }
-            }
-            AppCard(modifier = Modifier.weight(1.4f), onClick = onEditSetup, contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp)) {
-                FieldLabel("Фаза виробництва")
-                val phase = record.phase
-                if (!phase.isNullOrBlank()) {
-                    Text(phase, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                } else {
-                    Text("Вибрати", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, color = Palette.Blue)
-                }
-            }
-        }
-
-        StatusCard(state)
-    }
-}
-
-@Composable
-private fun StatusCard(state: HomeUiState) {
-    val now by rememberNow()
-    val work = state.workState
-    val (color, title, detail) = when {
-        work.downtime != null -> Triple(
-            Palette.Orange,
-            "ПРОСТІЙ",
-            listOfNotNull(work.downtime.reason, elapsed(work.downtime, now)).joinToString(" · "),
-        )
-        work.changeover != null -> Triple(Palette.Indigo, "ПЕРЕНАЛАДКА", elapsed(work.changeover, now))
-        work.phase != null -> Triple(Palette.Green, "В РОБОТІ", elapsed(work.phase, now))
-        !state.setupComplete -> Triple(Palette.Orange, "ПОТРІБНІ ДАНІ", "Вкажіть кількість і фазу")
-        else -> Triple(Palette.TextTertiary, "ОЧІКУВАННЯ", "Натисніть «Почати фазу»")
-    }
-    AppCard(modifier = Modifier.fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Dot(color, size = 14.dp)
-            Spacer(Modifier.width(10.dp))
-            Text(title, style = MaterialTheme.typography.titleLarge, color = color, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.weight(1f))
-            Text(detail, style = MaterialTheme.typography.titleMedium, color = Palette.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        // Під час простою у фазі показуємо, що фаза триває.
-        if (work.phase != null && (work.downtime != null || work.changeover != null)) {
-            VSpace(6.dp)
-            Text(
-                "Фаза триває: ${elapsed(work.phase, now)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Palette.TextSecondary,
-            )
-        }
+private fun statusOf(item: ActiveRecordState, now: Instant): StatusInfo {
+    val work = item.workState
+    return when {
+        work.downtime != null -> StatusInfo(Palette.Orange, "Простій", elapsed(work.downtime, now))
+        work.changeover != null -> StatusInfo(Palette.Indigo, "Переналадка", elapsed(work.changeover, now))
+        work.phase != null -> StatusInfo(Palette.Green, "В роботі", elapsed(work.phase, now))
+        !item.setupComplete -> StatusInfo(Palette.Orange, "Вкажіть кг і фазу", null)
+        else -> StatusInfo(Palette.TextTertiary, "Очікування", null)
     }
 }
 
 private fun elapsed(activity: ActiveActivity, now: Instant): String = TimeFormats.duration(activity.elapsedSeconds(now))
 
+/**
+ * Картка однієї продукції. Згорнута — один рядок: зліва артикул і назва, збоку поточна фаза,
+ * стан і час. Розгорнута — кількість, фаза, стан і великі кнопки фіксації часу.
+ */
+@Composable
+private fun RecordCard(
+    item: ActiveRecordState,
+    busy: Boolean,
+    onToggle: () -> Unit,
+    onClose: () -> Unit,
+    onEditSetup: () -> Unit,
+    onAction: (EventType) -> Unit,
+    onOpenJournal: () -> Unit,
+) {
+    val now by rememberNow()
+    val status = statusOf(item, now)
+    val record = item.record
+    AppCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
+        // Заголовок: натискання згортає / розгортає картку.
+        Surface(onClick = onToggle, color = Color.Transparent, modifier = Modifier.fillMaxWidth()) {
+            Row(
+                Modifier.heightIn(min = 84.dp).padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    if (item.isCollapsed) Icons.Filled.ExpandMore else Icons.Filled.ExpandLess,
+                    contentDescription = if (item.isCollapsed) "Розгорнути" else "Згорнути",
+                    tint = Palette.TextSecondary,
+                    modifier = Modifier.size(32.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Dot(status.color, size = 14.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(record.product.headline, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        if (item.isCollapsed) record.product.type else listOfNotNull("СКЮ ${record.product.sku}", record.product.type).joinToString(" · "),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Palette.TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                // Збоку: поточна фаза, стан і час.
+                Column(horizontalAlignment = Alignment.End, modifier = Modifier.widthIn(max = 280.dp)) {
+                    Text(
+                        record.phase ?: "Фазу не вибрано",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (record.phase == null) Palette.TextTertiary else Palette.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        listOfNotNull(status.label, status.timer).joinToString(" · "),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = status.color,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                    )
+                }
+                if (!item.isCollapsed && item.canClose) {
+                    IconButton(onClick = onClose, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Filled.Close, contentDescription = "Прибрати з екрана", tint = Palette.TextTertiary)
+                    }
+                }
+            }
+        }
+        AnimatedVisibility(visible = !item.isCollapsed) {
+            BoxWithConstraints(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                val wide = maxWidth >= 760.dp
+                if (wide) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        RecordDetails(item, now, onEditSetup, Modifier.weight(0.42f))
+                        ActionGrid(item, busy, now, onAction, onOpenJournal, Modifier.weight(0.58f).height(372.dp))
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        RecordDetails(item, now, onEditSetup, Modifier.fillMaxWidth())
+                        ActionGrid(item, busy, now, onAction, onOpenJournal, Modifier.fillMaxWidth().height(372.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecordDetails(item: ActiveRecordState, now: Instant, onEditSetup: () -> Unit, modifier: Modifier = Modifier) {
+    val record = item.record
+    val work = item.workState
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Surface(onClick = onEditSetup, modifier = Modifier.weight(1f), shape = RoundedCornerShape(18.dp), color = Palette.Background) {
+                Column(Modifier.padding(16.dp)) {
+                    FieldLabel("Кількість")
+                    val q = record.quantityKg
+                    if (q != null) {
+                        Text(NumberFormats.quantityKg(q), fontSize = 28.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    } else {
+                        Text("Вказати", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Palette.Blue)
+                    }
+                }
+            }
+            Surface(onClick = onEditSetup, modifier = Modifier.weight(1.4f), shape = RoundedCornerShape(18.dp), color = Palette.Background) {
+                Column(Modifier.padding(16.dp)) {
+                    FieldLabel("Фаза виробництва")
+                    val phase = record.phase
+                    if (!phase.isNullOrBlank()) {
+                        Text(phase, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    } else {
+                        Text("Вибрати", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Palette.Blue)
+                    }
+                }
+            }
+        }
+        // Під час простою чи переналадки у фазі показуємо, що фаза триває.
+        if (work.phase != null && (work.downtime != null || work.changeover != null)) {
+            Text(
+                "Фаза триває: ${elapsed(work.phase, now)}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Palette.TextSecondary,
+            )
+        }
+        work.downtime?.reason?.let {
+            Text("Причина простою: $it", style = MaterialTheme.typography.bodyLarge, color = Palette.Orange)
+        }
+    }
+}
+
 @Composable
 private fun ActionGrid(
-    state: HomeUiState,
+    item: ActiveRecordState,
     busy: Boolean,
+    now: Instant,
     onAction: (EventType) -> Unit,
     onOpenJournal: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val now by rememberNow()
-    val work = state.workState
+    val work = item.workState
 
-    fun enabled(type: EventType) = !busy && state.isEnabled(type)
-    fun hint(type: EventType): String? = when {
-        state.record == null -> "Спершу виберіть продукцію"
-        else -> (work.check(type, state.setupComplete) as? TransitionCheck.Denied)?.reason
-    }
+    fun enabled(type: EventType) = !busy && item.isEnabled(type)
+    fun hint(type: EventType): String? = (work.check(type, item.setupComplete) as? TransitionCheck.Denied)?.reason
     fun since(activity: ActiveActivity?): String? =
         activity?.let { "з ${TimeFormats.localTime(it.startedAt)} · ${elapsed(it, now)}" }
 
@@ -538,6 +601,10 @@ private fun FeedbackToast(feedback: Feedback, onClick: () -> Unit) {
                     Spacer(Modifier.width(16.dp))
                     Text(feedback.time, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                 }
+            }
+            if (feedback.product != null) {
+                VSpace(4.dp)
+                Text(feedback.product, color = Color.White.copy(alpha = 0.85f), fontSize = 20.sp, modifier = Modifier.padding(start = 48.dp))
             }
             if (feedback.duration != null) {
                 VSpace(6.dp)

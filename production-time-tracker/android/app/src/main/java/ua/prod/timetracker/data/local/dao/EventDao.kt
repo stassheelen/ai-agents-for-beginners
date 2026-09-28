@@ -26,6 +26,16 @@ abstract class EventDao {
     @Query("SELECT * FROM production_events WHERE record_id = :recordId ORDER BY timestamp_ms DESC, id DESC")
     abstract fun observeForRecord(recordId: String): Flow<List<ProductionEventEntity>>
 
+    /** Події всієї продукції, що зараз на екрані (для стану кнопок кожної картки). */
+    @Query(
+        "SELECT * FROM production_events WHERE record_id IN " +
+            "(SELECT record_id FROM production_records WHERE is_active = 1) ORDER BY timestamp_ms ASC, id ASC",
+    )
+    abstract fun observeForActiveRecords(): Flow<List<ProductionEventEntity>>
+
+    @Query("SELECT * FROM production_events WHERE record_id = :recordId ORDER BY timestamp_ms ASC, id ASC")
+    abstract suspend fun eventsForRecord(recordId: String): List<ProductionEventEntity>
+
     @Query("SELECT * FROM production_events WHERE timestamp_ms >= :fromMs ORDER BY timestamp_ms DESC, id DESC")
     abstract fun observeSince(fromMs: Long): Flow<List<ProductionEventEntity>>
 

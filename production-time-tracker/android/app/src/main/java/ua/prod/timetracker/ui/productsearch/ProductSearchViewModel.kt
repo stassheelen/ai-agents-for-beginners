@@ -19,7 +19,6 @@ import kotlinx.coroutines.launch
 import ua.prod.timetracker.domain.model.Product
 import ua.prod.timetracker.domain.repository.ProductRepository
 import ua.prod.timetracker.domain.repository.ProductionRepository
-import ua.prod.timetracker.domain.repository.SelectProductResult
 
 data class SearchUiState(
     val query: String = "",
@@ -59,12 +58,11 @@ class ProductSearchViewModel(
         _query.value = value
     }
 
+    /** Додає продукцію на головний екран (кілька SKU можуть бути в роботі одночасно). */
     fun select(product: Product) {
         viewModelScope.launch {
-            when (val result = production.selectProduct(product)) {
-                is SelectProductResult.Selected -> _events.emit(SearchEvent.Selected)
-                is SelectProductResult.Rejected -> _events.emit(SearchEvent.Error(result.reason))
-            }
+            production.addProduct(product)
+            _events.emit(SearchEvent.Selected)
         }
     }
 

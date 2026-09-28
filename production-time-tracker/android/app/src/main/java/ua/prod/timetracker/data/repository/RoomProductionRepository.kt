@@ -2,14 +2,18 @@ package ua.prod.timetracker.data.repository
 
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import ua.prod.timetracker.data.local.database.AppDatabase
 import ua.prod.timetracker.data.local.entity.ProductionEventEntity
 import ua.prod.timetracker.data.local.entity.ProductionRecordEntity
 import ua.prod.timetracker.data.local.toDomain
+import ua.prod.timetracker.domain.logic.RecordStates
 import ua.prod.timetracker.domain.logic.WorkStateReducer
-import ua.prod.timetracker.domain.model.ActivityKind
+import ua.prod.timetracker.domain.model.ActiveRecordState
 import ua.prod.timetracker.domain.model.EventType
 import ua.prod.timetracker.domain.model.Product
 import ua.prod.timetracker.domain.model.ProductionEvent
@@ -19,7 +23,6 @@ import ua.prod.timetracker.domain.model.TransitionCheck
 import ua.prod.timetracker.domain.model.WorkState
 import ua.prod.timetracker.domain.repository.ProductionRepository
 import ua.prod.timetracker.domain.repository.RecordEventResult
-import ua.prod.timetracker.domain.repository.SelectProductResult
 import ua.prod.timetracker.domain.repository.SettingsRepository
 import ua.prod.timetracker.sync.SyncScheduler
 import ua.prod.timetracker.util.TimeFormats
@@ -30,6 +33,9 @@ import java.util.UUID
 /**
  * Серце офлайн-логіки:
  * натискання → timestamp → Room (PENDING) → результат оператору → спроба синхронізації.
+ *
+ * На екрані може бути кілька продукцій (SKU) одночасно; стан кнопок кожної обчислюється
+ * лише з її власних подій (recordId), тож фази, переналадки й простої різних SKU незалежні.
  */
 class RoomProductionRepository(
     private val db: AppDatabase,
@@ -41,18 +47,14 @@ class RoomProductionRepository(
     private val eventDao = db.eventDao()
     private val recordDao = db.recordDao()
 
-    private val phaseTypes = EventType.ofActivity(ActivityKind.PHASE).map { it.name }
-    private val changeoverTypes = EventType.ofActivity(ActivityKind.CHANGEOVER).map { it.name }
-    private val downtimeTypes = EventType.ofActivity(ActivityKind.DOWNTIME).map { it.name }
-
-    override val activeRecord: Flow<ProductionRecord?> = recordDao.observeActive().map { it?.toDomain() }
-
-    override val workState: Flow<WorkState> = combine(
-        eventDao.observeLatestOfTypes(phaseTypes),
-        eventDao.observeLatestOfTypes(changeoverTypes),
-        eventDao.observeLatestOfTypes(downtimeTypes),
-    ) { phase, changeover, downtime ->
-        WorkStateReducer.fromLatest(phase?.toDomain(), changeover?.toDomain(), downtime?.toDomain())
+    override val activeRecords: Flow<List<ActiveRecordState>> = combine(
+        recordDao.observeActiveList(),
+        eventDao.observeForActiveRecords(),
+    ) { records, events ->
+        RecordStates.build(
+            records.map { RecordStates.RecordRow(it.toDomain(), it.isCollapsed) },
+            events.map { it.toDomain() },
+        )
     }
 
     override val lastEvent: Flow<ProductionEvent?> = eventDao.observeLatest().map { it?.toDomain() }
@@ -61,58 +63,91 @@ class RoomProductionRepository(
 
     override val failedCount: Flow<Int> = eventDao.observeFailedCount()
 
+    private val _newlyAdded = MutableStateFlow<String?>(null)
+    override val newlyAddedRecordId: StateFlow<String?> = _newlyAdded.asStateFlow()
+
+    override fun consumeNewlyAdded() {
+        _newlyAdded.value = null
+    }
+
     override fun recentProducts(limit: Int): Flow<List<Product>> =
         recordDao.observeRecent(limit).map { list -> list.map { it.toDomain().product } }
 
-    override fun eventsForRecord(recordId: String): Flow<List<ProductionEvent>> =
-        eventDao.observeForRecord(recordId).map { list -> list.map { it.toDomain() } }
+    override fun eventsForActiveRecords(): Flow<List<ProductionEvent>> =
+        eventDao.observeForActiveRecords().map { list -> list.map { it.toDomain() }.reversed() }
 
     override fun eventsSince(from: Instant): Flow<List<ProductionEvent>> =
         eventDao.observeSince(from.toEpochMilli()).map { list -> list.map { it.toDomain() } }
 
-    override suspend fun selectProduct(product: Product): SelectProductResult = db.withTransaction {
-        currentState().productChangeBlockReason()?.let { return@withTransaction SelectProductResult.Rejected(it) }
-        val current = recordDao.active()
-        if (current != null && current.sku == product.sku) {
-            return@withTransaction SelectProductResult.Selected(current.toDomain())
+    override suspend fun addProduct(product: Product): ProductionRecord {
+        val record = db.withTransaction {
+            recordDao.activeBySku(product.sku)?.let { existing ->
+                recordDao.focus(existing.recordId)
+                return@withTransaction existing.toDomain()
+            }
+            val now = TimeFormats.now(clock)
+            // Фаза підставляється з останньої доданої продукції — зазвичай лінія працює в тій самій фазі.
+            val previous = recordDao.latestActive()
+            val entity = ProductionRecordEntity(
+                recordId = UUID.randomUUID().toString(),
+                sku = product.sku,
+                productName = product.type,
+                article = product.article,
+                group = product.group,
+                quantityKg = null,
+                phase = previous?.phase,
+                comment = null,
+                createdAt = TimeFormats.toIsoUtc(now),
+                createdAtMs = now.toEpochMilli(),
+                isActive = true,
+                isCollapsed = false,
+            )
+            recordDao.insert(entity)
+            recordDao.focus(entity.recordId)
+            entity.toDomain()
         }
-        val now = TimeFormats.now(clock)
-        val entity = ProductionRecordEntity(
-            recordId = UUID.randomUUID().toString(),
-            sku = product.sku,
-            productName = product.type,
-            article = product.article,
-            group = product.group,
-            // Фаза переноситься з попереднього запису — зазвичай лінія працює в тій самій фазі.
-            quantityKg = null,
-            phase = current?.phase,
-            comment = null,
-            createdAt = TimeFormats.toIsoUtc(now),
-            createdAtMs = now.toEpochMilli(),
-            isActive = true,
-        )
-        recordDao.deactivateAll()
-        recordDao.insert(entity)
-        SelectProductResult.Selected(entity.toDomain())
+        if (!record.isSetupComplete) _newlyAdded.value = record.recordId
+        return record
     }
 
-    override suspend fun updateSetup(quantityKg: Double, phase: String, comment: String?) {
+    override suspend fun updateSetup(recordId: String, quantityKg: Double, phase: String, comment: String?) {
         db.withTransaction {
-            val record = recordDao.active() ?: return@withTransaction
+            val record = recordDao.byRecordId(recordId) ?: return@withTransaction
             // Під час фази змінювати саму фазу не можна — лише кількість / коментар.
-            val newPhase = if (currentState().canChangePhase) phase else record.phase
-            recordDao.updateSetup(record.recordId, quantityKg, newPhase, comment?.trim()?.ifEmpty { null })
+            val newPhase = if (stateOf(recordId).canChangePhase) phase else record.phase
+            recordDao.updateSetup(recordId, quantityKg, newPhase, comment?.trim()?.ifEmpty { null })
         }
     }
 
-    override suspend fun recordEvent(type: EventType, downtimeReason: String?, comment: String?): RecordEventResult {
+    override suspend fun setCollapsed(recordId: String, collapsed: Boolean) {
+        recordDao.setCollapsed(recordId, collapsed)
+    }
+
+    override suspend fun closeRecord(recordId: String): String? = db.withTransaction {
+        val state = stateOf(recordId)
+        when {
+            state.phase != null -> "Спершу завершіть фазу"
+            state.downtime != null -> "Спершу завершіть простій"
+            state.changeover != null -> "Спершу завершіть переналадку"
+            else -> {
+                recordDao.deactivate(recordId)
+                null
+            }
+        }
+    }
+
+    override suspend fun recordEvent(
+        recordId: String,
+        type: EventType,
+        downtimeReason: String?,
+        comment: String?,
+    ): RecordEventResult {
         val deviceId = settings.ensureDeviceId()
         val result = db.withTransaction {
-            val record = recordDao.active()
-                ?: return@withTransaction RecordEventResult.Rejected("Спершу виберіть продукцію")
-            val state = currentState()
-            val domainRecord = record.toDomain()
-            val check = state.check(type, domainRecord.isSetupComplete)
+            val record = recordDao.byRecordId(recordId)?.takeIf { it.isActive }
+                ?: return@withTransaction RecordEventResult.Rejected("Продукцію не знайдено")
+            val state = stateOf(recordId)
+            val check = state.check(type, record.toDomain().isSetupComplete)
             if (check is TransitionCheck.Denied) return@withTransaction RecordEventResult.Rejected(check.reason)
 
             val now = TimeFormats.now(clock)
@@ -153,9 +188,6 @@ class RoomProductionRepository(
         syncScheduler.requestSync()
     }
 
-    private suspend fun currentState(): WorkState = WorkStateReducer.fromLatest(
-        eventDao.latestOfTypes(phaseTypes)?.toDomain(),
-        eventDao.latestOfTypes(changeoverTypes)?.toDomain(),
-        eventDao.latestOfTypes(downtimeTypes)?.toDomain(),
-    )
+    private suspend fun stateOf(recordId: String): WorkState =
+        WorkStateReducer.reduce(eventDao.eventsForRecord(recordId).map { it.toDomain() })
 }

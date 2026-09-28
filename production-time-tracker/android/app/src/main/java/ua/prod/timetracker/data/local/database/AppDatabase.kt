@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import ua.prod.timetracker.data.local.dao.EventDao
 import ua.prod.timetracker.data.local.dao.ProductDao
 import ua.prod.timetracker.data.local.dao.RecordDao
@@ -13,7 +15,7 @@ import ua.prod.timetracker.data.local.entity.ProductionRecordEntity
 
 @Database(
     entities = [ProductEntity::class, ProductionEventEntity::class, ProductionRecordEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -27,6 +29,15 @@ abstract class AppDatabase : RoomDatabase() {
          * Зміни схеми в майбутніх версіях — лише через явні Migration.
          */
         fun build(context: Context): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, "time_tracker.db").build()
+            Room.databaseBuilder(context, AppDatabase::class.java, "time_tracker.db")
+                .addMigrations(MIGRATION_1_2)
+                .build()
+
+        /** v2: кілька SKU одночасно — у записів з'явився прапорець згорнутої картки. */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE production_records ADD COLUMN is_collapsed INTEGER NOT NULL DEFAULT 0")
+            }
+        }
     }
 }

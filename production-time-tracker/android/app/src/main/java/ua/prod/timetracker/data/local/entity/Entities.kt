@@ -67,7 +67,7 @@ data class ProductionEventEntity(
     @ColumnInfo(name = "synced_at") val syncedAt: String? = null,
 )
 
-/** Виробничий запис: вибрана продукція, кількість (кг), фаза. Активний лише один. */
+/** Виробничий запис: вибрана продукція, кількість (кг), фаза. Активних може бути кілька (кілька SKU). */
 @Entity(
     tableName = "production_records",
     indices = [
@@ -89,4 +89,6 @@ data class ProductionRecordEntity(
     @ColumnInfo(name = "created_at") val createdAt: String,
     @ColumnInfo(name = "created_at_ms") val createdAtMs: Long,
     @ColumnInfo(name = "is_active") val isActive: Boolean,
+    /** Картка згорнута на головному екрані (додано у версії БД 2). */
+    @ColumnInfo(name = "is_collapsed", defaultValue = "0") val isCollapsed: Boolean = false,
 )

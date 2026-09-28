@@ -9,22 +9,20 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import ua.prod.timetracker.domain.model.ProductionEvent
-import ua.prod.timetracker.domain.model.ProductionRecord
 import ua.prod.timetracker.domain.model.SyncState
 import ua.prod.timetracker.domain.repository.ProductionRepository
 import java.time.LocalDate
 import java.time.ZoneId
 
-enum class JournalFilter { CURRENT_PRODUCT, TODAY }
+enum class JournalFilter { ACTIVE_PRODUCTS, TODAY }
 
 data class JournalUiState(
-    val filter: JournalFilter = JournalFilter.CURRENT_PRODUCT,
-    val record: ProductionRecord? = null,
+    val filter: JournalFilter = JournalFilter.ACTIVE_PRODUCTS,
+    val activeCount: Int = 0,
     val events: List<ProductionEvent> = emptyList(),
     val sync: SyncState = SyncState(),
     val loaded: Boolean = false,
@@ -36,19 +34,19 @@ class JournalViewModel(
     syncState: Flow<SyncState>,
 ) : ViewModel() {
 
-    private val filter = MutableStateFlow(JournalFilter.CURRENT_PRODUCT)
+    private val filter = MutableStateFlow(JournalFilter.ACTIVE_PRODUCTS)
 
-    val state: StateFlow<JournalUiState> = combine(filter, production.activeRecord) { f, record -> f to record }
-        .flatMapLatest { (f, record) ->
+    val state: StateFlow<JournalUiState> = filter
+        .flatMapLatest { f ->
             val events = when (f) {
-                JournalFilter.CURRENT_PRODUCT ->
-                    record?.let { production.eventsForRecord(it.recordId) } ?: flowOf(emptyList())
+                JournalFilter.ACTIVE_PRODUCTS -> production.eventsForActiveRecords()
                 JournalFilter.TODAY -> production.eventsSince(
                     LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant(),
                 )
             }
-            events.map { JournalUiState(filter = f, record = record, events = it, loaded = true) }
+            events.map { JournalUiState(filter = f, events = it, loaded = true) }
         }
+        .combine(production.activeRecords) { s, records -> s.copy(activeCount = records.size) }
         .combine(syncState) { s, sync -> s.copy(sync = sync) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUiState())
 

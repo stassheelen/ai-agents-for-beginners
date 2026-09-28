@@ -55,12 +55,12 @@ fun JournalScreen(viewModel: JournalViewModel, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         AppTopBar(
             title = "Журнал подій",
-            subtitle = state.record?.let { "${it.product.headline} · ${it.product.type}" },
+            subtitle = if (state.activeCount > 0) "Продукції на екрані: ${state.activeCount}" else null,
             syncState = state.sync,
             onBack = onBack,
         )
         SegmentedControl(
-            options = listOf("Поточна продукція", "Сьогодні — усі"),
+            options = listOf("Продукція на екрані", "Сьогодні — усі"),
             selectedIndex = state.filter.ordinal,
             onSelect = { viewModel.setFilter(JournalFilter.entries[it]) },
             modifier = Modifier.padding(horizontal = 24.dp).widthIn(max = 640.dp).fillMaxWidth(),
@@ -83,7 +83,7 @@ fun JournalScreen(viewModel: JournalViewModel, onBack: () -> Unit) {
                 items(state.events, key = { it.eventId }) { event ->
                     EventRow(
                         event = event,
-                        showProduct = state.filter == JournalFilter.TODAY,
+                        showProduct = true,
                         onClick = { editing = event },
                     )
                 }
