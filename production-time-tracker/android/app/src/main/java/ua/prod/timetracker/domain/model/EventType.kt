@@ -28,7 +28,7 @@ enum class EventType(
 
 enum class SyncStatus { PENDING, SYNCED }
 
-/** Причини простою. У подію та SharePoint записується зрозумілий підпис. */
+/** Причини простою. У подію та Google Таблицю записується зрозумілий підпис. */
 enum class DowntimeReason(val label: String) {
     NO_MATERIAL("Відсутність матеріалу"),
     EQUIPMENT_FAILURE("Поломка обладнання"),

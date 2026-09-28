@@ -84,7 +84,7 @@ class EventSyncer(
     private fun httpMessage(code: Int): String = when (code) {
         401, 403 -> "Сервер відхилив ключ пристрою ($code)"
         404 -> "API не знайдено — перевірте API URL"
-        in 500..599 -> "Сервер або SharePoint недоступний ($code)"
+        in 500..599 -> "Сервер або Google Таблиця недоступні ($code)"
         else -> "Помилка сервера ($code)"
     }
 

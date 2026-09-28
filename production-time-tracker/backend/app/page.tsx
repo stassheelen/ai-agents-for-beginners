@@ -11,7 +11,7 @@ export default function Home() {
           <code>GET /api/products</code> — довідник продукції
         </li>
         <li>
-          <code>GET /api/health</code> — стан API та SharePoint
+          <code>GET /api/health</code> — стан API та Google Таблиці
         </li>
       </ul>
     </main>

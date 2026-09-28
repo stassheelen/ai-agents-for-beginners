@@ -45,7 +45,7 @@ describe("processEvents", () => {
     const res = await processEvents(parse([{ ...e, comment: "Заміна ножа" }]), store);
     expect(res.updated).toBe(1);
     expect(store.items.size).toBe(1);
-    expect(store.items.get(e.eventId)!.event.comment).toBe("Заміна ножа");
+    expect(store.items.get(e.eventId)!.comment).toBe("Заміна ножа");
   });
 
   it("rejects only the invalid event and keeps the rest", async () => {

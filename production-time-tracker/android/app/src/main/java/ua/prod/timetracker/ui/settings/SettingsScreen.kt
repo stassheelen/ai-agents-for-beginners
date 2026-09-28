@@ -106,11 +106,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         when (check) {
                             ServerCheckState.Idle, ServerCheckState.Checking -> {
                                 StatusLine("Статус API", null, "Перевірка…")
-                                StatusLine("Статус SharePoint", null, "Перевірка…")
+                                StatusLine("Google Таблиця", null, "Перевірка…")
                             }
                             is ServerCheckState.Done -> {
                                 StatusLine("Статус API", check.status.apiOk, check.status.apiMessage)
-                                StatusLine("Статус SharePoint", check.status.sharePointOk, check.status.sharePointMessage)
+                                StatusLine("Google Таблиця", check.status.storageOk, check.status.storageMessage)
                             }
                         }
                         StatusLine(

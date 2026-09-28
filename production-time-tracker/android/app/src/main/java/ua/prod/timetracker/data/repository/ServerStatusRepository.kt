@@ -7,7 +7,7 @@ import ua.prod.timetracker.domain.model.ServerStatus
 import ua.prod.timetracker.domain.repository.SettingsRepository
 import java.io.IOException
 
-/** Перевірка GET /api/health: чи доступний бекенд і чи має він доступ до SharePoint. */
+/** Перевірка GET /api/health: чи доступний бекенд і чи має він доступ до Google Таблиці. */
 class ServerStatusRepository(
     private val api: TimeTrackerApi,
     private val settings: SettingsRepository,
@@ -19,16 +19,16 @@ class ServerStatusRepository(
         }
         return try {
             val health = api.health(TimeTrackerApi.endpoint(s.apiUrl, "/api/health"), s.apiKey.ifBlank { null })
-            val sp = health.sharepoint
+            val storage = health.storage
             ServerStatus(
                 apiOk = health.ok,
                 apiMessage = if (health.ok) "Доступний" else "Відповідає з помилкою",
-                sharePointOk = sp?.ok,
-                sharePointMessage = when {
-                    sp == null -> "Невідомо"
-                    !sp.configured -> "Не налаштовано на сервері"
-                    sp.ok -> "Доступний" + (sp.listName?.let { " · список «$it»" } ?: "")
-                    else -> "Помилка: ${sp.error ?: "немає доступу"}"
+                storageOk = storage?.ok,
+                storageMessage = when {
+                    storage == null -> "Невідомо"
+                    !storage.configured -> "Не налаштовано на сервері"
+                    storage.ok -> "Доступна" + (storage.name?.let { " · $it" } ?: "")
+                    else -> "Помилка: ${storage.error ?: "немає доступу"}"
                 },
             )
         } catch (e: CancellationException) {

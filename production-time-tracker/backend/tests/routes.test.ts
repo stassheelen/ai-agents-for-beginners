@@ -47,19 +47,19 @@ describe("POST /api/events", () => {
   });
 
   it("returns 503 when the store throws so the tablet keeps events PENDING", async () => {
-    store.findExisting = async () => {
-      throw new Error("SharePoint down");
+    store.upsertEvents = async () => {
+      throw new Error("Google Sheets down");
     };
     expect((await post({ events: [makeEvent()] })).status).toBe(503);
   });
 });
 
 describe("GET /api/health and /api/products", () => {
-  it("reports SharePoint status", async () => {
+  it("reports storage status", async () => {
     const res = await health(new Request("http://localhost/api/health", { headers: { "x-api-key": KEY } }));
     const body = await res.json();
     expect(body.ok).toBe(true);
-    expect(body.sharepoint.ok).toBe(true);
+    expect(body.storage.ok).toBe(true);
   });
 
   it("returns 501 until the products list is configured", async () => {

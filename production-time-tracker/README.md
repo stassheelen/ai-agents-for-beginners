@@ -14,7 +14,8 @@
 ```
 production-time-tracker/
 ├── android/          Android-додаток (Kotlin, Jetpack Compose, Material 3, Room, WorkManager)
-├── backend/          API на Vercel (Next.js, TypeScript, Microsoft Graph → SharePoint List)
+├── backend/          API на Vercel (Next.js, TypeScript) → Google Таблиця
+├── google-sheets/    Apps Script для Google Таблиці (Code.gs)
 └── sample-data/      Тестові довідники: 150 позицій (CSV, XLSX) і файл з помилками
 ```
 
@@ -25,19 +26,19 @@ production-time-tracker/
                                                                         ↓ (є мережа)
                                    POST /api/events (пакети до 100 подій, x-api-key)
                                                                         ↓
-                                        Vercel (Next.js) → Microsoft Graph → SharePoint List
+                              Vercel (Next.js) → Apps Script вебдодаток → Google Таблиця
                                                                         ↓
                                                               SYNCED на планшеті
 ```
 
 * **Offline-first.** Подія записується в Room *до* будь-якої спроби відправки. Якщо Wi-Fi, Vercel
-  або SharePoint недоступні, подія лишається `PENDING` і відправляється автоматично: при появі
+  або Google Таблиця недоступні, подія лишається `PENDING` і відправляється автоматично: при появі
   мережі, після кожної нової події та раз на 15 хвилин (WorkManager переживає перезапуск планшета).
 * **Без дублів.** Кожна подія має `eventId` (UUID). Бекенд використовує його як ключ ідемпотентності:
-  повторна відправка повертає `duplicate`. Колонка `EventId` у SharePoint індексована
-  й має `enforceUniqueValues`, тому дублі неможливі навіть при паралельних запитах.
-* **Жодних секретів Microsoft на планшеті.** Планшет знає лише адресу API та ключ пристрою.
-  Облікові дані Entra ID зберігаються у Vercel Environment Variables.
+  повторна відправка повертає `duplicate`. Apps Script записує події під блокуванням
+  (`LockService`) і перевіряє `EventId`, тому дублі неможливі навіть при паралельних запитах.
+* **Жодних секретів Google на планшеті.** Планшет знає лише адресу API та ключ пристрою.
+  Адреса скрипту й спільний секрет зберігаються у Vercel Environment Variables.
 
 ### Android (`android/`)
 
@@ -105,9 +106,10 @@ production-time-tracker/
 (`сос філ`), кирилична «А» знаходить латинську «A», а `a4587` знаходить `A-4587`. Точні збіги
 артикулу або SKU показуються першими.
 
-«**Оновити довідник з сервера**» використовує `GET /api/products`. Він уже працює, якщо на
-бекенді задано `SP_PRODUCTS_LIST`, і проходить ту саму перевірку, що й файл
-(`ProductCatalogSource`).
+«**Оновити довідник з сервера**» використовує `GET /api/products`: бекенд читає аркуш
+**«Довідник»** у тій самій Google Таблиці (колонки як у файлі: `SKU`/`Артикул ГП`, `Вид`/`Найменування`,
+`Артикул`/`Артикул МХП`, `Торгова група`). Дані проходять ту саму перевірку, що й файл
+(`ProductCatalogSource`). Тож довідник можна вести прямо в Google Таблиці.
 
 ## Збірка й встановлення Android-додатка
 
@@ -150,8 +152,8 @@ API:
 | Метод | Шлях | Опис |
 |---|---|---|
 | `POST` | `/api/events` | `{ "events": [...] }` (також масив або одна подія), 1–500 подій. Відповідь: `results[]` зі статусом кожної події `created` / `duplicate` / `updated` / `error` |
-| `GET` | `/api/products` | довідник з SharePoint (`501`, поки не налаштовано) |
-| `GET` | `/api/health` | стан API та SharePoint (екран «Налаштування») |
+| `GET` | `/api/products` | довідник з аркуша «Довідник» (`501`, поки аркуша немає) |
+| `GET` | `/api/health` | стан API та Google Таблиці (екран «Налаштування») |
 
 Усі запити вимагають заголовок `x-api-key`. Структура події:
 
@@ -167,7 +169,7 @@ API:
 ```
 
 `durationSeconds` заповнюється для подій `*_END` (тривалість обчислює планшет). `recordId` групує
-всі події однієї партії, щоб у SharePoint було зручно рахувати тривалості.
+всі події однієї партії, щоб у таблиці було зручно рахувати тривалості.
 
 ### Розгортання
 
@@ -181,58 +183,51 @@ API:
 | Змінна | Опис |
 |---|---|
 | `DEVICE_API_KEYS` | ключі планшетів через кому |
-| `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | App registration в Microsoft Entra ID |
-| `SP_SITE_URL` або `SP_SITE_ID` | сайт SharePoint, напр. `https://contoso.sharepoint.com/sites/Production` |
-| `SP_EVENTS_LIST` | назва або ID списку подій (за замовчуванням `ProductionEvents`) |
-| `SP_PRODUCTS_LIST` | необов'язково: список довідника для `GET /api/products` |
+| `GOOGLE_SCRIPT_URL` | URL вебдодатка Apps Script (закінчується на `/exec`) |
+| `GOOGLE_SCRIPT_SECRET` | спільний секрет; той самий рядок, що `SHARED_SECRET` у властивостях скрипту |
 
-### Microsoft Entra ID і SharePoint
+### Google Таблиця (налаштування за 5 хвилин, без Google Cloud)
 
-1. **Entra ID → App registrations → New registration** (наприклад, «Production Time Tracker»).
-2. **API permissions → Microsoft Graph → Application permissions**: `Sites.Selected`
-   (рекомендовано) або `Sites.ReadWrite.All`, потім **Grant admin consent**.
-3. Для `Sites.Selected` видайте застосунку доступ `write` до потрібного сайту
-   (`POST /sites/{site-id}/permissions`, або PnP: `Grant-PnPAzureADAppSitePermission`).
-4. **Certificates & secrets → New client secret**. Значення внесіть у Vercel (`AZURE_CLIENT_SECRET`).
-5. Список `ProductionEvents` з усіма колонками бекенд **створює сам** при першому зверненні
-   (для `Sites.Selected` потрібна роль `manage` на сайті). За бажання його можна створити заздалегідь:
+1. Створіть Google Таблицю (https://sheets.new), наприклад «Фіксатор часу».
+2. **Розширення → Apps Script**. Замініть вміст `Code.gs` кодом з
+   [`google-sheets/Code.gs`](google-sheets/Code.gs) → 💾 Зберегти.
+3. **Налаштування проєкту (⚙) → Властивості скрипту → Додати властивість**:
+   `SHARED_SECRET` = значення `GOOGLE_SCRIPT_SECRET` з Vercel.
+4. **Розгорнути → Нове розгортання** → ⚙ Тип: **Вебдодаток** →
+   *Виконувати як*: **Я**, *Хто має доступ*: **Усі** → **Розгорнути** → дозволити доступ до таблиці.
+5. Скопіюйте **URL вебдодатка** (`https://script.google.com/macros/s/…/exec`) у Vercel:
+   `GOOGLE_SCRIPT_URL`, потім **Redeploy**.
+6. Перевірка: на планшеті **Налаштування → Перевірити з'єднання** → «Google Таблиця: 🟢 Доступна».
 
-   ```bash
-   cd production-time-tracker/backend
-   cp .env.example .env.local   # заповніть AZURE_* і SP_SITE_URL
-   npm install
-   npm run provision            # створить список ProductionEvents з усіма колонками
-   ```
+Доступ «Усі» означає, що URL приймає запити без входу в Google, але без правильного секрету
+скрипт нічого не записує й не читає. Якщо змінюєте код скрипту, робіть **Розгорнути → Керування
+розгортаннями → ✎ → Версія: нова**, щоб URL лишився тим самим.
 
-Колонки списку `ProductionEvents`:
+Аркуш **«Події»** створюється автоматично при першій події:
 
-| Колонка | Тип | Примітка |
-|---|---|---|
-| EventId | Text | індексована, **унікальна** |
-| RecordId | Text | індексована |
-| SKU | Text | індексована |
-| ProductName | Text | |
-| Article | Text | |
-| QuantityKg | Number (2 знаки) | |
-| Phase | Text | |
-| EventType | Text | індексована |
-| Timestamp | Date and Time | індексована |
-| DurationSeconds | Number | для `*_END` |
-| DowntimeReason | Text | |
-| Comment | Multiple lines | |
-| RecordComment | Multiple lines | |
-| DeviceId | Text | індексована |
-| CreatedAt | Date and Time | |
-
-`Title` заповнюється автоматично: `PHASE_START · 000123`.
+| Колонка | Вміст |
+|---|---|
+| EventId | UUID події (ключ, дублів немає) |
+| RecordId | ідентифікатор партії (виробничого запису) |
+| Timestamp | дата й час події (час Києва) |
+| EventType | `PHASE_START`, `PHASE_END`, `CHANGEOVER_START`, `CHANGEOVER_END`, `DOWNTIME_START`, `DOWNTIME_END` |
+| SKU, Article, ProductName | продукція (SKU зберігається як текст, з нулями) |
+| QuantityKg | кількість, кг |
+| Phase | фаза |
+| DurationSeconds, Duration | тривалість для `*_END` (секунди та `год:хв:с`) |
+| DowntimeReason | причина простою |
+| Comment, RecordComment | коментар до події / до запису |
+| DeviceId | планшет |
+| TimestampUtc, CreatedAt | час в ISO 8601 UTC, як на планшеті |
+| ReceivedAt | коли подія дійшла до таблиці |
 
 ### Локальна розробка бекенду
 
 ```bash
 cd production-time-tracker/backend
 npm install
-npm test                         # 19 тестів: ідемпотентність, пакети 1/10/50/100, auth, Graph $batch
-DEVICE_API_KEYS=dev EVENT_STORE=memory npm run dev   # API без SharePoint (пам'ять процесу)
+npm test                         # ідемпотентність, пакети 1/10/50/100, auth, Code.gs з імітацією Google
+DEVICE_API_KEYS=dev EVENT_STORE=memory npm run dev   # API без Google Таблиці (пам'ять процесу)
 ```
 
 ## Фінальна перевірка
@@ -242,7 +237,7 @@ DEVICE_API_KEYS=dev EVENT_STORE=memory npm run dev   # API без SharePoint (п
 | Імпорт 100+ позицій, пошук за повним і частковим артикулом, SKU, видом | юніт-тести на `sample-data/*` (150 позицій) та на реальному довіднику (688 позицій) |
 | Кнопки та послідовності (фаза, переналадка, простій), тривалості | `WorkStateTest`, `FormatsTest` |
 | Timestamp у UTC ISO 8601, показ у локальному часі | `FormatsTest` (Europe/Kyiv) |
-| Пакети 1 / 10 / 50 / 100 подій, повторна відправка без дублів | `backend/tests/*` + ручна перевірка запущеного API |
+| Пакети 1 / 10 / 50 / 100 подій, повторна відправка без дублів | `backend/tests/*`, зокрема справжній `Code.gs` з імітацією сервісів Google |
 | Offline → online | ручна перевірка на планшеті за чек-листом нижче |
 
 Чек-лист на планшеті:
@@ -254,4 +249,4 @@ DEVICE_API_KEYS=dev EVENT_STORE=memory npm run dev   # API без SharePoint (п
    простій, завершити фазу. Лічильник «Очікують відправки» росте.
 5. Журнал подій: усі події на місці з часом і тривалостями.
 6. Увімкнути Wi-Fi → 🔄 Синхронізація → «✓ Синхронізовано».
-7. У SharePoint: усі події є, дублів немає (EventId унікальні).
+7. У Google Таблиці (аркуш «Події»): усі події є, дублів немає (EventId унікальні).

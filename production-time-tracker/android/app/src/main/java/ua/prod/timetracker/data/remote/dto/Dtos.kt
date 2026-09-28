@@ -55,11 +55,12 @@ data class ProductsResponseDto(
     val updatedAt: String? = null,
 )
 
+/** Стан сховища подій (Google Таблиця) з точки зору бекенду. */
 @Serializable
-data class SharePointStatusDto(
+data class StorageStatusDto(
     val configured: Boolean = false,
     val ok: Boolean = false,
-    val listName: String? = null,
+    val name: String? = null,
     val error: String? = null,
 )
 
@@ -67,5 +68,5 @@ data class SharePointStatusDto(
 data class HealthResponseDto(
     val ok: Boolean = false,
     val time: String? = null,
-    val sharepoint: SharePointStatusDto? = null,
+    val storage: StorageStatusDto? = null,
 )

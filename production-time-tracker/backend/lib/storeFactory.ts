@@ -1,5 +1,5 @@
-import { graphConfig } from "./config";
-import { SharePointEventStore } from "./sharepoint";
+import { googleSheetsConfig } from "./config";
+import { GoogleSheetsEventStore } from "./googleSheets";
 import { InMemoryEventStore, type EventStore } from "./store";
 
 let override: EventStore | null = null;
@@ -12,15 +12,15 @@ export function setStoreForTests(store: EventStore | null) {
 }
 
 /**
- * Повертає сховище SharePoint або null, якщо змінні середовища ще не задано.
- * EVENT_STORE=memory — лише для локальної перевірки без SharePoint (дані не зберігаються між перезапусками).
+ * Повертає сховище Google Таблиці або null, якщо змінні середовища ще не задано.
+ * EVENT_STORE=memory — лише для локальної перевірки (дані не зберігаються між перезапусками).
  */
 export function getStore(): EventStore | null {
   if (override) return override;
   if (process.env.EVENT_STORE === "memory") return (memory ??= new InMemoryEventStore());
-  const config = graphConfig();
+  const config = googleSheetsConfig();
   if (!config) return null;
   const key = JSON.stringify(config);
-  if (!cached || cached.key !== key) cached = { key, store: new SharePointEventStore(config) };
+  if (!cached || cached.key !== key) cached = { key, store: new GoogleSheetsEventStore(config) };
   return cached.store;
 }

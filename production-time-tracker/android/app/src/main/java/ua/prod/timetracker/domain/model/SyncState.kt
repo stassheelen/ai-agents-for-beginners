@@ -9,10 +9,10 @@ data class SyncState(
     val apiConfigured: Boolean = true,
 )
 
-/** Результат перевірки бекенду та SharePoint (Налаштування). */
+/** Результат перевірки бекенду та Google Таблиці (Налаштування). */
 data class ServerStatus(
     val apiOk: Boolean,
     val apiMessage: String,
-    val sharePointOk: Boolean?,
-    val sharePointMessage: String,
+    val storageOk: Boolean?,
+    val storageMessage: String,
 )

@@ -2,14 +2,13 @@
   "name": "production-time-tracker-api",
   "version": "1.0.0",
   "private": true,
-  "description": "API для фіксатора часу: Android → Vercel → Microsoft Graph → SharePoint List",
+  "description": "API для фіксатора часу: Android → Vercel → Google Таблиця (Apps Script)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "provision": "node --env-file=.env.local scripts/provision-sharepoint.mjs"
+    "test": "vitest run"
   },
   "engines": {
     "node": ">=20"

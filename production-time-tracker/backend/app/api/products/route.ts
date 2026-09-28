@@ -8,7 +8,7 @@ export const maxDuration = 60;
 
 /**
  * GET /api/products — довідник продукції для майбутнього автоматичного оновлення.
- * Поки SP_PRODUCTS_LIST не задано, повертає 501 — планшет пропонує імпорт CSV/XLSX.
+ * Поки в таблиці немає аркуша «Довідник», повертає 501 — планшет пропонує імпорт CSV/XLSX.
  */
 export async function GET(request: Request) {
   const auth = checkDeviceKey(request);
@@ -22,6 +22,6 @@ export async function GET(request: Request) {
     return json({ products, updatedAt: new Date().toISOString() });
   } catch (e) {
     console.error("GET /api/products failed", e);
-    return json({ error: "SharePoint тимчасово недоступний" }, 503);
+    return json({ error: "Google Таблиця тимчасово недоступна" }, 503);
   }
 }

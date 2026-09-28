@@ -33,13 +33,13 @@ export async function POST(request: Request) {
   }
 
   const store = getStore();
-  if (!store) return json({ error: "SharePoint не налаштовано на сервері" }, 503);
+  if (!store) return json({ error: "Google Таблицю не налаштовано на сервері" }, 503);
 
   try {
     return json(await processEvents(parsed.items, store));
   } catch (e) {
     // Події залишаться на планшеті в статусі PENDING і будуть відправлені повторно.
     console.error("POST /api/events failed", e);
-    return json({ error: "SharePoint тимчасово недоступний" }, 503);
+    return json({ error: "Google Таблиця тимчасово недоступна" }, 503);
   }
 }
