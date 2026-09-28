@@ -3,7 +3,8 @@
  *
  * Встановлення (один раз):
  *  1. Відкрийте Google Таблицю → Розширення → Apps Script → вставте цей код замість вмісту Code.gs.
- *  2. Налаштування проєкту (⚙) → Властивості скрипту → додайте SHARED_SECRET (той самий, що GOOGLE_SCRIPT_SECRET у Vercel).
+ *  2. Секрет: або впишіть його в SHARED_SECRET нижче, або (надійніше) додайте властивість скрипту
+ *     SHARED_SECRET: Налаштування проєкту (⚙) → Властивості скрипту. Має збігатися з GOOGLE_SCRIPT_SECRET у Vercel.
  *  3. Розгорнути → Нове розгортання → Тип «Вебдодаток» → Виконувати як: «Я», Доступ: «Усі» → Розгорнути.
  *  4. Скопіюйте URL вебдодатка (…/exec) у змінну GOOGLE_SCRIPT_URL у Vercel.
  *
@@ -11,6 +12,9 @@
  * блокуванням (LockService), тому повторна або паралельна відправка не створює дублів.
  * Необов'язковий аркуш «Довідник» (SKU, Вид, Артикул, Група) віддається планшету як довідник продукції.
  */
+
+// Спільний секрет (той самий, що GOOGLE_SCRIPT_SECRET у Vercel). Властивість скрипту SHARED_SECRET має пріоритет.
+const SHARED_SECRET = '';
 
 const EVENTS_SHEET = 'Події';
 const PRODUCTS_SHEET = 'Довідник';
@@ -40,7 +44,7 @@ function doPost(e) {
   } catch (err) {
     return json_({ ok: false, error: 'Некоректний JSON' });
   }
-  const secret = PropertiesService.getScriptProperties().getProperty('SHARED_SECRET');
+  const secret = PropertiesService.getScriptProperties().getProperty('SHARED_SECRET') || SHARED_SECRET;
   if (!secret) return json_({ ok: false, error: 'У властивостях скрипту не задано SHARED_SECRET' });
   if (body.token !== secret) return json_({ ok: false, error: 'unauthorized' });
 
