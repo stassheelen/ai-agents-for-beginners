@@ -1,201 +1,93 @@
-/**
- * Фіксатор часу — Google Таблиця як сховище подій виробництва.
- *
- * Встановлення (один раз):
- *  1. Відкрийте Google Таблицю → Розширення → Apps Script → вставте цей код замість вмісту Code.gs.
- *  2. Секрет: або впишіть його в SHARED_SECRET нижче, або (надійніше) додайте властивість скрипту
- *     SHARED_SECRET: Налаштування проєкту (⚙) → Властивості скрипту. Має збігатися з GOOGLE_SCRIPT_SECRET у Vercel.
- *  3. Розгорнути → Нове розгортання → Тип «Вебдодаток» → Виконувати як: «Я», Доступ: «Усі» → Розгорнути.
- *  4. Скопіюйте URL вебдодатка (…/exec) у змінну GOOGLE_SCRIPT_URL у Vercel.
- *
- * Аркуш «Події» створюється автоматично. EventId — ключ ідемпотентності: запис іде під
- * блокуванням (LockService), тому повторна або паралельна відправка не створює дублів.
- * Необов'язковий аркуш «Довідник» (SKU, Вид, Артикул, Група) віддається планшету як довідник продукції.
- */
+// Фіксатор часу: Google Таблиця як сховище подій (інструкція: production-time-tracker/README.md).
+const SHARED_SECRET = ''; // той самий, що GOOGLE_SCRIPT_SECRET у Vercel
+const EV = 'Події', PR = 'Довідник', TZ = 'Europe/Kyiv', CC = 13;
+const H = ['EventId','RecordId','Timestamp','EventType','SKU','Article','ProductName','QuantityKg','Phase','DurationSeconds','Duration','DowntimeReason','Comment','RecordComment','DeviceId','TimestampUtc','CreatedAt','ReceivedAt'];
+const F = ['@','@','dd.mm.yyyy hh:mm:ss','@','@','@','@','0.00','@','0','[h]:mm:ss','@','@','@','@','@','@','dd.mm.yyyy hh:mm:ss'];
 
-// Спільний секрет (той самий, що GOOGLE_SCRIPT_SECRET у Vercel). Властивість скрипту SHARED_SECRET має пріоритет.
-const SHARED_SECRET = '';
-
-const EVENTS_SHEET = 'Події';
-const PRODUCTS_SHEET = 'Довідник';
-const TIME_ZONE = 'Europe/Kyiv';
-
-// EventId має бути першою колонкою; Comment і RecordComment — поруч.
-const HEADERS = [
-  'EventId', 'RecordId', 'Timestamp', 'EventType', 'SKU', 'Article', 'ProductName', 'QuantityKg', 'Phase',
-  'DurationSeconds', 'Duration', 'DowntimeReason', 'Comment', 'RecordComment', 'DeviceId',
-  'TimestampUtc', 'CreatedAt', 'ReceivedAt',
-];
-const FORMATS = [
-  '@', '@', 'dd.mm.yyyy hh:mm:ss', '@', '@', '@', '@', '0.00', '@',
-  '0', '[h]:mm:ss', '@', '@', '@', '@',
-  '@', '@', 'dd.mm.yyyy hh:mm:ss',
-];
-const COMMENT_COL = HEADERS.indexOf('Comment') + 1;
-
-function doGet() {
-  return json_({ ok: true, service: 'fiksator-chasu', message: 'Працює. Дані приймаються лише через POST.' });
-}
+function doGet() { return out_({ ok: true, service: 'fiksator-chasu' }); }
 
 function doPost(e) {
-  let body;
+  let b;
+  try { b = JSON.parse(e.postData.contents); } catch (x) { return out_({ ok: false, error: 'bad json' }); }
+  const s = PropertiesService.getScriptProperties().getProperty('SHARED_SECRET') || SHARED_SECRET;
+  if (!s) return out_({ ok: false, error: 'SHARED_SECRET not set' });
+  if (b.token !== s) return out_({ ok: false, error: 'unauthorized' });
   try {
-    body = JSON.parse(e.postData.contents);
-  } catch (err) {
-    return json_({ ok: false, error: 'Некоректний JSON' });
-  }
-  const secret = PropertiesService.getScriptProperties().getProperty('SHARED_SECRET') || SHARED_SECRET;
-  if (!secret) return json_({ ok: false, error: 'У властивостях скрипту не задано SHARED_SECRET' });
-  if (body.token !== secret) return json_({ ok: false, error: 'unauthorized' });
-
-  try {
-    switch (body.action) {
-      case 'health':
-        return json_(health_());
-      case 'upsertEvents':
-        return json_({ ok: true, results: upsertEvents_(body.events || []) });
-      case 'products':
-        return json_(Object.assign({ ok: true }, readProducts_()));
-      default:
-        return json_({ ok: false, error: 'Невідома дія: ' + body.action });
+    if (b.action === 'health') {
+      const sh = sheet_();
+      return out_({ ok: true, spreadsheet: SpreadsheetApp.getActiveSpreadsheet().getName(), sheet: sh.getName(), events: Math.max(sh.getLastRow() - 1, 0) });
     }
-  } catch (err) {
-    return json_({ ok: false, error: String(err && err.message ? err.message : err) });
-  }
+    if (b.action === 'upsertEvents') return out_({ ok: true, results: upsert_(b.events || []) });
+    if (b.action === 'products') return out_(Object.assign({ ok: true }, products_()));
+    return out_({ ok: false, error: 'unknown action' });
+  } catch (x) { return out_({ ok: false, error: String((x && x.message) || x) }); }
 }
 
-function health_() {
-  const sheet = eventsSheet_();
-  return {
-    ok: true,
-    spreadsheet: SpreadsheetApp.getActiveSpreadsheet().getName(),
-    sheet: sheet.getName(),
-    events: Math.max(sheet.getLastRow() - 1, 0),
-  };
-}
-
-/** Додає нові події, для вже існуючих — оновлює коментарі. Повертає статус кожної події. */
-function upsertEvents_(events) {
+// Запис під блокуванням + перевірка EventId: дублів не буде.
+function upsert_(evs) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
-    const sheet = eventsSheet_();
-    const lastRow = sheet.getLastRow();
-    const rowById = new Map();
-    if (lastRow > 1) {
-      sheet.getRange(2, 1, lastRow - 1, 1).getValues()
-        .forEach((r, i) => rowById.set(String(r[0]), i + 2));
-    }
-
-    const receivedAt = new Date();
-    const results = [];
-    const newRows = [];
-    for (const ev of events) {
-      if (!ev || !ev.eventId) {
-        results.push({ eventId: ev && ev.eventId ? ev.eventId : '', status: 'error', error: 'немає eventId' });
-        continue;
+    const sh = sheet_(), last = sh.getLastRow(), ids = new Map(), res = [], rows = [], now = new Date();
+    if (last > 1) sh.getRange(2, 1, last - 1, 1).getValues().forEach((r, i) => ids.set(String(r[0]), i + 2));
+    for (const e of evs) {
+      if (!e || !e.eventId) { res.push({ eventId: '', status: 'error', error: 'no eventId' }); continue; }
+      const r = ids.get(e.eventId);
+      if (r === undefined) {
+        rows.push(row_(e, now)); ids.set(e.eventId, -1);
+        res.push({ eventId: e.eventId, status: 'created' }); continue;
       }
-      const row = rowById.get(ev.eventId);
-      if (row === undefined) {
-        newRows.push(toRow_(ev, receivedAt));
-        rowById.set(ev.eventId, -1);
-        results.push({ eventId: ev.eventId, status: 'created' });
-      } else if (row === -1) {
-        results.push({ eventId: ev.eventId, status: 'duplicate' });
-      } else {
-        const range = sheet.getRange(row, COMMENT_COL, 1, 2);
-        const current = range.getValues()[0];
-        const comment = ev.comment || '';
-        const recordComment = ev.recordComment || '';
-        if (String(current[0]) !== comment || String(current[1]) !== recordComment) {
-          range.setValues([[safe_(comment), safe_(recordComment)]]);
-          results.push({ eventId: ev.eventId, status: 'updated' });
-        } else {
-          results.push({ eventId: ev.eventId, status: 'duplicate' });
-        }
+      let st = 'duplicate';
+      if (r > 0) {
+        const g = sh.getRange(r, CC, 1, 2), c = g.getValues()[0], a = e.comment || '', d = e.recordComment || '';
+        if (String(c[0]) !== a || String(c[1]) !== d) { g.setValues([[safe_(a), safe_(d)]]); st = 'updated'; }
       }
+      res.push({ eventId: e.eventId, status: st });
     }
-
-    if (newRows.length) {
-      const range = sheet.getRange(lastRow + 1, 1, newRows.length, HEADERS.length);
-      range.setNumberFormats(newRows.map(() => FORMATS));
-      range.setValues(newRows);
+    if (rows.length) {
+      const g = sh.getRange(last + 1, 1, rows.length, H.length);
+      g.setNumberFormats(rows.map(() => F)); g.setValues(rows);
     }
     SpreadsheetApp.flush();
-    return results;
-  } finally {
-    lock.releaseLock();
-  }
+    return res;
+  } finally { lock.releaseLock(); }
 }
 
-function toRow_(ev, receivedAt) {
-  const seconds = ev.durationSeconds == null ? '' : Number(ev.durationSeconds);
-  return [
-    ev.eventId,
-    ev.recordId || '',
-    new Date(ev.timestamp),
-    ev.eventType,
-    safe_(ev.sku),
-    safe_(ev.article || ''),
-    safe_(ev.productName || ''),
-    ev.quantityKg == null ? '' : Number(ev.quantityKg),
-    safe_(ev.phase || ''),
-    seconds,
-    seconds === '' ? '' : seconds / 86400,
-    safe_(ev.downtimeReason || ''),
-    safe_(ev.comment || ''),
-    safe_(ev.recordComment || ''),
-    safe_(ev.deviceId),
-    ev.timestamp,
-    ev.createdAt,
-    receivedAt,
-  ];
+function row_(e, now) {
+  const s = e.durationSeconds == null ? '' : Number(e.durationSeconds);
+  return [e.eventId, e.recordId || '', new Date(e.timestamp), e.eventType, safe_(e.sku), safe_(e.article), safe_(e.productName),
+    e.quantityKg == null ? '' : Number(e.quantityKg), safe_(e.phase), s, s === '' ? '' : s / 86400, safe_(e.downtimeReason),
+    safe_(e.comment), safe_(e.recordComment), safe_(e.deviceId), e.timestamp, e.createdAt, now];
 }
 
-/** Текст, що починається з =, + або @, Таблиця сприйняла б як формулу. */
-function safe_(value) {
-  const s = String(value == null ? '' : value);
-  return /^[=+@]/.test(s) ? "'" + s : s;
-}
+function safe_(v) { const s = v == null ? '' : String(v); return /^[=+@]/.test(s) ? "'" + s : s; }
 
-function eventsSheet_() {
+function sheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(EVENTS_SHEET);
-  if (!sheet) {
-    sheet = ss.insertSheet(EVENTS_SHEET, 0);
-    ss.setSpreadsheetTimeZone(TIME_ZONE);
-    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold').setBackground('#f1f3f4');
-    sheet.setFrozenRows(1);
+  let sh = ss.getSheetByName(EV);
+  if (!sh) {
+    sh = ss.insertSheet(EV, 0); ss.setSpreadsheetTimeZone(TZ);
+    sh.getRange(1, 1, 1, H.length).setValues([H]).setFontWeight('bold'); sh.setFrozenRows(1);
   }
-  return sheet;
+  return sh;
 }
 
-/** Аркуш «Довідник»: перший рядок — заголовки (SKU / СКЮ / Артикул ГП, Вид / Найменування, Артикул, Група). */
-function readProducts_() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PRODUCTS_SHEET);
-  if (!sheet || sheet.getLastRow() < 2) return { products: null };
-  const values = sheet.getDataRange().getDisplayValues();
-  const header = values[0].map((h) => String(h).toLowerCase().replace(/[^0-9a-zа-яіїєґ]/g, ''));
-  const col = (aliases) => header.findIndex((h) => aliases.indexOf(h) >= 0);
-  const sku = col(['sku', 'скю', 'ску', 'артикулгп', 'код', 'кодгп']);
-  const type = col(['вид', 'найменування', 'назва', 'type', 'name']);
-  const article = col(['артикул', 'артикулмхп', 'article']);
-  const group = col(['торговагрупа', 'група', 'group', 'категорія']);
-  if (sku < 0 || type < 0) return { products: null, error: 'В аркуші «Довідник» потрібні колонки SKU та Вид' };
-  const products = [];
-  for (let i = 1; i < values.length; i++) {
-    const r = values[i];
-    if (!String(r[sku]).trim()) continue;
-    products.push({
-      sku: String(r[sku]).trim(),
-      type: String(r[type]).trim(),
-      article: article >= 0 ? String(r[article]).trim() : null,
-      group: group >= 0 ? String(r[group]).trim() || null : null,
-    });
+// Аркуш «Довідник» (необов'язково): SKU/Артикул ГП, Вид/Найменування, Артикул, Група.
+function products_() {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PR);
+  if (!sh || sh.getLastRow() < 2) return { products: null };
+  const v = sh.getDataRange().getDisplayValues();
+  const h = v[0].map(x => String(x).toLowerCase().replace(/[^0-9a-zа-яіїєґ]/g, ''));
+  const c = a => h.findIndex(x => a.indexOf(x) >= 0);
+  const k = c(['sku','скю','артикулгп','код']), t = c(['вид','найменування','назва']), a = c(['артикул','артикулмхп']), g = c(['торговагрупа','група']);
+  if (k < 0 || t < 0) return { products: null, error: 'Довідник: потрібні колонки SKU та Вид' };
+  const p = [];
+  for (let i = 1; i < v.length; i++) {
+    const r = v[i];
+    if (!String(r[k]).trim()) continue;
+    p.push({ sku: String(r[k]).trim(), type: String(r[t]).trim(), article: a >= 0 ? String(r[a]).trim() : null, group: g >= 0 ? String(r[g]).trim() || null : null });
   }
-  return { products: products };
+  return { products: p };
 }
 
-function json_(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
-}
+function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
