@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
@@ -80,7 +81,12 @@ fun TextInputDialog(
             minLines = minLines,
             maxLines = if (singleLine) 1 else 10,
             textStyle = MaterialTheme.typography.bodyLarge,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            // Без автовиправлення й автоматичних великих літер — вони псують ключі та адреси.
+            keyboardOptions = KeyboardOptions(
+                keyboardType = keyboardType,
+                capitalization = if (singleLine) KeyboardCapitalization.None else KeyboardCapitalization.Sentences,
+                autoCorrectEnabled = !singleLine,
+            ),
             modifier = Modifier.fillMaxWidth().focusRequester(focus),
             shape = RoundedCornerShape(16.dp),
         )

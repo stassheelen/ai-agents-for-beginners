@@ -52,7 +52,8 @@ class DataStoreSettingsRepository(
     }
 
     override suspend fun setApiKey(value: String) {
-        dataStore.edit { it[API_KEY] = value.trim() }
+        // Пробіли й дефіси не є частиною ключа: «1234-5678» = «12345678».
+        dataStore.edit { it[API_KEY] = value.filterNot { ch -> ch.isWhitespace() || ch == '-' } }
     }
 
     override suspend fun setPhases(value: List<String>) {

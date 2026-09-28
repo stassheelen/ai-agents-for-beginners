@@ -31,6 +31,13 @@ describe("POST /api/events", () => {
     expect((await post({ events: [makeEvent()] }, "wrong")).status).toBe(401);
   });
 
+  it("ignores spaces and dashes in the device key", async () => {
+    process.env.DEVICE_API_KEYS = "1234-5678-9012-3456";
+    expect((await post({ events: [makeEvent()] }, "1234567890123456")).status).toBe(200);
+    expect((await post({ events: [makeEvent()] }, " 1234 5678 9012 3456 ")).status).toBe(200);
+    expect((await post({ events: [makeEvent()] }, "1234-5678-9012-3457")).status).toBe(401);
+  });
+
   it("stores events idempotently", async () => {
     const events = Array.from({ length: 7 }, () => makeEvent());
     const first = await (await post({ events })).json();

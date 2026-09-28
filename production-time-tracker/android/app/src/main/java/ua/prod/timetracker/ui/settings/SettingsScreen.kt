@@ -96,7 +96,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         HorizontalDivider(color = Palette.Separator)
                         SettingRow("API URL", settings.apiUrl.ifBlank { "Не налаштовано" }) { editing = EditField.API_URL }
                         HorizontalDivider(color = Palette.Separator)
-                        SettingRow("Ключ пристрою", if (settings.apiKey.isBlank()) "Не задано" else "••••••••") {
+                        // Показуємо лише останні 4 символи — щоб перевірити, що збережено саме той ключ.
+                        SettingRow(
+                            "Ключ пристрою",
+                            if (settings.apiKey.isBlank()) "Не задано" else "•••• " + settings.apiKey.takeLast(4),
+                        ) {
                             editing = EditField.API_KEY
                         }
                     }
@@ -256,8 +260,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
         EditField.API_KEY -> TextInputDialog(
             title = "Ключ пристрою",
             initial = "",
-            label = "Новий ключ (поточний не показується)",
-            keyboardType = KeyboardType.Password,
+            label = "16 цифр; дефіси можна не вводити",
+            keyboardType = KeyboardType.Number,
             onDismiss = { editing = null },
             onSave = { viewModel.setApiKey(it); editing = null },
         )

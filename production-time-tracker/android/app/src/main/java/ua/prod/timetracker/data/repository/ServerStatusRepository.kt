@@ -17,6 +17,9 @@ class ServerStatusRepository(
         if (s.apiUrl.isBlank()) {
             return ServerStatus(false, "API URL не налаштовано", null, "Невідомо — API не налаштовано")
         }
+        if (s.apiKey.isBlank()) {
+            return ServerStatus(false, "Ключ пристрою не введено", null, "Невідомо — введіть ключ пристрою")
+        }
         return try {
             val health = api.health(TimeTrackerApi.endpoint(s.apiUrl, "/api/health"), s.apiKey.ifBlank { null })
             val storage = health.storage
