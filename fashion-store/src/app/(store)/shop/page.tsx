@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { CatalogView } from "@/components/store/catalog-view";
 import { FLAG_TITLES, parseCatalogParams } from "@/lib/catalog-params";
-import { getNavigation } from "@/lib/queries";
+import { catalogPills } from "@/lib/catalog-nav";
 
 export async function generateMetadata(props: PageProps<"/shop">): Promise<Metadata> {
   const sp = await props.searchParams;
@@ -16,7 +16,7 @@ export async function generateMetadata(props: PageProps<"/shop">): Promise<Metad
 export default async function ShopPage(props: PageProps<"/shop">) {
   const sp = await props.searchParams;
   const params = parseCatalogParams(sp);
-  const nav = await getNavigation();
+  const pills = await catalogPills(params.flag === "featured" ? null : params.flag ?? "all");
   const title = params.flag ? FLAG_TITLES[params.flag] : "Усі товари";
   return (
     <CatalogView
@@ -28,13 +28,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
       ]}
       scope={{ flag: params.flag }}
       params={params}
-      subnav={[
-        { name: "Усі", href: "/shop", active: !params.flag },
-        { name: "Новинки", href: "/shop?flag=new", active: params.flag === "new" },
-        { name: "Бестселери", href: "/shop?flag=bestseller", active: params.flag === "bestseller" },
-        ...nav.categories.map((c) => ({ name: c.name, href: `/shop/${c.slug}` })),
-        { name: "Розпродаж", href: "/shop?flag=sale", active: params.flag === "sale" },
-      ]}
+      pills={pills}
     />
   );
 }

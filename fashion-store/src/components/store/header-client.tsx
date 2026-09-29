@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Heart, Menu, Search, ShoppingBag, User } from "lucide-react";
 import { Dialog, SheetContent, DialogTitle, Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/overlay";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ export function HeaderClient({ items, storeName }: { items: NavItem[]; storeName
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [prevPath, setPrevPath] = React.useState(pathname);
@@ -26,7 +27,8 @@ export function HeaderClient({ items, storeName }: { items: NavItem[]; storeName
   }
 
   React.useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    // Hysteresis keeps the header from flickering around the threshold.
+    const onScroll = () => setScrolled((was) => (was ? window.scrollY > 4 : window.scrollY > 48));
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -42,62 +44,99 @@ export function HeaderClient({ items, storeName }: { items: NavItem[]; storeName
   };
 
   const activeItem = active !== null ? items[active] : null;
+  const current = pathname + (searchParams.get("flag") ? `?flag=${searchParams.get("flag")}` : "");
+  // "/shop" is the parent of every catalog URL, so it only counts as current on an exact match.
+  const isCurrent = (href: string) => current === href || (!href.includes("?") && href !== "/shop" && pathname.startsWith(`${href}/`));
+  const iconBtn =
+    "relative inline-flex size-11 items-center justify-center rounded-full transition-[background-color,transform] duration-200 hover:bg-black/[0.04] active:scale-90 [&_svg]:transition-transform [&_svg]:duration-200 hover:[&_svg]:scale-105";
+  const badge = "absolute right-1 top-1 flex min-w-4 h-4 items-center justify-center rounded-full bg-foreground px-1 text-[9px] font-medium leading-none text-white";
 
   return (
     <header
-      className={cn("sticky top-0 z-40 bg-white transition-[border-color] duration-200", scrolled || activeItem ? "border-b border-border" : "border-b border-transparent")}
+      className={cn(
+        "sticky top-0 z-40 bg-white transition-[box-shadow,margin] duration-300",
+        scrolled && "lg:mb-4",
+        scrolled || activeItem ? "shadow-[0_1px_0_var(--border),0_8px_24px_-18px_rgba(0,0,0,0.25)]" : "shadow-[0_1px_0_transparent]",
+      )}
       onMouseLeave={scheduleClose}
     >
-      <div className="container-page grid h-14 grid-cols-[1fr_auto_1fr] items-center lg:h-16 lg:grid-cols-[auto_1fr_auto] lg:gap-10">
+      <div
+        className={cn(
+          "container-page grid h-14 grid-cols-[1fr_auto_1fr] items-center transition-[height] duration-300 ease-out lg:gap-8",
+          scrolled ? "lg:h-16" : "lg:h-20",
+        )}
+      >
         {/* Mobile: menu + search */}
-        <div className="flex items-center gap-1 lg:hidden">
-          <button className="-ml-2 p-2" aria-label="Відкрити меню" onClick={() => setMobileOpen(true)}>
+        <div className="-ml-3 flex items-center lg:hidden">
+          <button className={iconBtn} aria-label="Відкрити меню" onClick={() => setMobileOpen(true)}>
             <Menu className="size-5" strokeWidth={1.5} />
           </button>
-          <button className="p-2" aria-label="Пошук" onClick={() => setSearchOpen(true)}>
+          <button className={iconBtn} aria-label="Пошук" onClick={() => setSearchOpen(true)}>
             <Search className="size-5" strokeWidth={1.5} />
           </button>
         </div>
 
-        <Link href="/" className="font-display text-lg font-semibold tracking-[0.28em] lg:text-xl" aria-label={`${storeName} — головна`}>
-          {storeName}
+        <Link
+          href="/"
+          className={cn(
+            "justify-self-center font-display font-semibold leading-none tracking-[0.34em] transition-[font-size,opacity] duration-300 hover:opacity-70 lg:justify-self-start",
+            "text-xl",
+            scrolled ? "lg:text-[26px]" : "lg:text-[30px]",
+          )}
+          aria-label={`${storeName} — головна`}
+        >
+          {/* Trailing letter-spacing would push the word off-centre */}
+          <span className="-mr-[0.34em]">{storeName}</span>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden h-full items-stretch lg:flex" aria-label="Головна навігація">
-          {items.map((item, i) => (
-            <div key={item.label} className="flex items-stretch" onMouseEnter={() => open(i)}>
-              <Link
-                href={item.href}
-                className={cn(
-                  "relative flex items-center px-3.5 text-[12px] font-medium uppercase tracking-[0.14em] transition-colors",
-                  item.highlight && "text-destructive",
-                  "after:absolute after:inset-x-3.5 after:bottom-0 after:h-px after:origin-left after:scale-x-0 after:bg-foreground after:transition-transform",
-                  active === i && "after:scale-x-100",
-                )}
-                aria-expanded={item.columns.length ? active === i : undefined}
-                onFocus={() => open(i)}
-              >
-                {item.label}
-              </Link>
-            </div>
-          ))}
+        <nav className="hidden h-full items-stretch justify-center lg:flex" aria-label="Головна навігація">
+          {items.map((item, i) => {
+            const here = isCurrent(item.href);
+            return (
+              <div key={item.label} className="flex items-stretch" onMouseEnter={() => open(i)}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "relative flex items-center px-3 text-[12px] font-medium uppercase tracking-[0.16em] transition-colors duration-200 xl:px-4",
+                    item.highlight ? "text-destructive hover:text-destructive/80" : "text-foreground/80 hover:text-foreground",
+                    here && !item.highlight && "text-foreground",
+                    "after:absolute after:inset-x-3 after:bottom-[calc(50%-14px)] after:h-px after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-300 xl:after:inset-x-4",
+                    (active === i || here) && "after:scale-x-100",
+                  )}
+                  aria-current={here ? "page" : undefined}
+                  aria-expanded={item.columns.length ? active === i : undefined}
+                  onFocus={() => open(i)}
+                >
+                  {item.label}
+                </Link>
+              </div>
+            );
+          })}
         </nav>
 
-        <div className="flex items-center justify-end gap-0.5 lg:gap-1">
-          <button className="hidden p-2 lg:inline-flex" aria-label="Пошук" onClick={() => setSearchOpen(true)}>
+        <div className="-mr-3 flex items-center justify-end lg:mr-0 lg:gap-0.5">
+          <button className={cn(iconBtn, "hidden lg:inline-flex")} aria-label="Пошук" onClick={() => setSearchOpen(true)}>
             <Search className="size-5" strokeWidth={1.5} />
           </button>
-          <Link href="/account" className="hidden p-2 lg:inline-flex" aria-label="Акаунт">
+          <Link href="/account" className={cn(iconBtn, "hidden lg:inline-flex")} aria-label="Акаунт">
             <User className="size-5" strokeWidth={1.5} />
           </Link>
-          <Link href="/wishlist" className="relative hidden p-2 sm:inline-flex" aria-label="Список бажань">
-            <Heart className="size-5" strokeWidth={1.5} />
-            {wishlist.size > 0 && <span className="absolute right-0.5 top-0.5 flex size-4 items-center justify-center rounded-full bg-foreground text-[9px] text-white">{wishlist.size}</span>}
+          <Link href="/wishlist" className={cn(iconBtn, "hidden sm:inline-flex")} aria-label={`Список бажань${wishlist.size ? `, ${wishlist.size}` : ""}`}>
+            <Heart className={cn("size-5", wishlist.size > 0 && "fill-foreground")} strokeWidth={1.5} />
+            {wishlist.size > 0 && (
+              <span key={wishlist.size} className={cn(badge, "animate-pop")}>
+                {wishlist.size}
+              </span>
+            )}
           </Link>
-          <button className="relative -mr-2 p-2 lg:mr-0" aria-label={`Кошик, ${cart.count} товарів`} onClick={() => setCartOpen(true)}>
+          <button className={iconBtn} aria-label={`Кошик, ${cart.count} товарів`} onClick={() => setCartOpen(true)}>
             <ShoppingBag className="size-5" strokeWidth={1.5} />
-            {cart.count > 0 && <span className="absolute right-0.5 top-0.5 flex size-4 items-center justify-center rounded-full bg-foreground text-[9px] text-white">{cart.count}</span>}
+            {cart.count > 0 && (
+              <span key={cart.count} className={cn(badge, "animate-pop")}>
+                {cart.count}
+              </span>
+            )}
           </button>
         </div>
       </div>

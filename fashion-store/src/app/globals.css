@@ -45,6 +45,11 @@
   --animate-slide-in-left: slide-in-left 0.35s cubic-bezier(0.32, 0.72, 0, 1);
   --animate-slide-in-bottom: slide-in-bottom 0.35s cubic-bezier(0.32, 0.72, 0, 1);
   --animate-marquee: marquee 30s linear infinite;
+  --animate-dropdown-in: dropdown-in 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+  --animate-dropdown-out: dropdown-out 0.16s ease-in forwards;
+  --animate-ticker-next: ticker-next 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+  --animate-ticker-prev: ticker-prev 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+  --animate-pop: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 
   @keyframes fade-in {
     from { opacity: 0; }
@@ -57,6 +62,27 @@
   @keyframes slide-in-left {
     from { transform: translateX(-100%); }
     to { transform: translateX(0); }
+  }
+  @keyframes dropdown-in {
+    from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes dropdown-out {
+    from { opacity: 1; transform: none; }
+    to { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  }
+  @keyframes ticker-next {
+    from { opacity: 0; transform: translateY(60%); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes ticker-prev {
+    from { opacity: 0; transform: translateY(-60%); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+    100% { transform: scale(1); }
   }
   @keyframes slide-in-bottom {
     from { transform: translateY(100%); }
@@ -71,6 +97,15 @@
   html {
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+  :focus-visible {
+    outline: 1px solid var(--foreground);
+    outline-offset: 2px;
   }
   body {
     background: var(--background);
@@ -119,4 +154,27 @@
 @utility font-display {
   font-family: var(--font-display);
   letter-spacing: -0.02em;
+}
+
+/* Scroll reveal: only items that start below the fold are hidden (see useReveal), so nothing above the fold waits on JS. */
+.reveal-pending {
+  opacity: 0;
+  transform: translateY(15px);
+}
+.reveal-in {
+  transition:
+    opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-pending {
+    opacity: 1;
+    transform: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

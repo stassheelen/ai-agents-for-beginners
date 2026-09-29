@@ -47,8 +47,8 @@ export function parseCatalogParams(sp: RawSearchParams): CatalogParams {
 export const SORT_LABELS: Record<CatalogSort, string> = {
   featured: "Рекомендовані",
   newest: "Новинки",
-  "price-asc": "Ціна: від низької",
-  "price-desc": "Ціна: від високої",
+  "price-asc": "Від дешевих до дорогих",
+  "price-desc": "Від дорогих до дешевих",
   bestselling: "Бестселери",
 };
 
