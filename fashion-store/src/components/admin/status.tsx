@@ -40,3 +40,9 @@ export function PaymentBadge({ status }: { status: string }) {
 export function ProductStatusBadge({ status }: { status: string }) {
   return <Badge variant={status === "PUBLISHED" ? "success" : status === "DRAFT" ? "warning" : "muted"}>{PRODUCT_STATUS_LABELS[status] ?? status}</Badge>;
 }
+
+export function paymentMethodLabel(method: string, provider: string) {
+  if (method === "cod") return "Накладений платіж (оплата при отриманні)";
+  const via = provider === "manual" ? "рахунок від менеджера" : provider === "liqpay" ? "LiqPay" : provider;
+  return `Оплата карткою · ${via}`;
+}

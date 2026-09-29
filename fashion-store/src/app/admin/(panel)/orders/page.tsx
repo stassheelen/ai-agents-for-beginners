@@ -1,10 +1,13 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/admin/shell";
 import { AdminFilters, Pagination } from "@/components/admin/filters";
-import { OrderStatusBadge, PaymentBadge, ORDER_STATUSES, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/components/admin/status";
-import { Card, EmptyState, Table, TD, TH, THead, TR } from "@/components/ui/misc";
+import { OrderStatusBadge, PaymentBadge, ORDER_STATUSES, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, paymentMethodLabel } from "@/components/admin/status";
+import { ExpandableRow } from "@/components/admin/expandable-row";
+import { DELIVERY_METHODS } from "@/lib/providers/delivery";
+import { Card, EmptyState, Table, TD, TH, THead } from "@/components/ui/misc";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
 
 export const metadata = { title: "Замовлення" };
@@ -39,7 +42,7 @@ export default async function OrdersPage(props: PageProps<"/admin/orders">) {
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
-      include: { items: { select: { quantity: true } } },
+      include: { items: true },
     }),
     prisma.order.groupBy({ by: ["status"], _count: true }),
   ]);
@@ -70,6 +73,7 @@ export default async function OrdersPage(props: PageProps<"/admin/orders">) {
             <Table>
               <THead>
                 <tr>
+                  <TH className="w-8 pl-3"><span className="sr-only">Деталі</span></TH>
                   <TH>№</TH>
                   <TH>Дата</TH>
                   <TH>Клієнт</TH>
@@ -81,7 +85,7 @@ export default async function OrdersPage(props: PageProps<"/admin/orders">) {
               </THead>
               <tbody>
                 {orders.map((o) => (
-                  <TR key={o.id}>
+                  <ExpandableRow key={o.id} colSpan={7} details={<OrderQuickView order={o} />}>
                     <TD>
                       <Link href={`/admin/orders/${o.id}`} className="font-medium hover:underline">
                         #{o.number}
@@ -103,7 +107,7 @@ export default async function OrdersPage(props: PageProps<"/admin/orders">) {
                     <TD>
                       <OrderStatusBadge status={o.status} />
                     </TD>
-                  </TR>
+                  </ExpandableRow>
                 ))}
               </tbody>
             </Table>
@@ -112,5 +116,71 @@ export default async function OrdersPage(props: PageProps<"/admin/orders">) {
         )}
       </Card>
     </>
+  );
+}
+
+type OrderWithItems = Prisma.OrderGetPayload<{ include: { items: true } }>;
+
+function OrderQuickView({ order: o }: { order: OrderWithItems }) {
+  const delivery = DELIVERY_METHODS.find((d) => d.id === o.deliveryMethod)?.label ?? o.deliveryMethod;
+  return (
+    <div className="grid gap-4 border border-border bg-white p-4 max-lg:sticky max-lg:left-3 max-lg:w-[calc(100vw-3.75rem)] sm:grid-cols-2 lg:grid-cols-[1fr_280px_260px]">
+      <section className="sm:col-span-2 lg:col-span-1">
+        <h3 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Товари ({o.items.length})</h3>
+        <ul className="divide-y divide-border">
+          {o.items.map((i) => (
+            <li key={i.id} className="flex items-center gap-3 py-2">
+              <div className="relative size-12 shrink-0 bg-muted">{i.image && <Image src={i.image} alt="" fill sizes="48px" className="object-cover" />}</div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{i.name}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {[i.color, i.size && `розмір ${i.size}`].filter(Boolean).join(" · ")} · {i.sku}
+                </p>
+              </div>
+              <div className="text-right sm:flex sm:items-center sm:gap-4">
+                <p className="whitespace-nowrap text-[11px] text-muted-foreground sm:text-sm">
+                  {i.quantity} × {formatMoney(i.unitPrice, o.currency)}
+                </p>
+                <p className="whitespace-nowrap font-medium sm:w-24">{formatMoney(i.total, o.currency)}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <dl className="mt-2 space-y-1 border-t border-border pt-2 text-xs">
+          {o.discount > 0 && (
+            <div className="flex justify-between"><dt className="text-muted-foreground">Знижка {o.promotionCode && `(${o.promotionCode})`}</dt><dd>−{formatMoney(o.discount, o.currency)}</dd></div>
+          )}
+          <div className="flex justify-between"><dt className="text-muted-foreground">Доставка</dt><dd>{o.shippingCost ? formatMoney(o.shippingCost, o.currency) : "Безкоштовно"}</dd></div>
+          <div className="flex justify-between text-sm font-medium"><dt>Разом</dt><dd>{formatMoney(o.total, o.currency)}</dd></div>
+        </dl>
+      </section>
+      <section className="space-y-1">
+        <h3 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Доставка</h3>
+        <p>{delivery}</p>
+        <p>{o.city}</p>
+        <p className="text-muted-foreground">{o.deliveryAddress}</p>
+        {o.trackingNumber && <p className="pt-1">ТТН: <strong>{o.trackingNumber}</strong></p>}
+        <p className="pt-2">
+          {o.firstName} {o.lastName}
+        </p>
+        <p><a href={`tel:${o.phone}`} className="hover:underline">{o.phone}</a></p>
+      </section>
+      <section className="space-y-1">
+        <h3 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Оплата</h3>
+        <p>{paymentMethodLabel(o.paymentMethod, o.paymentProvider)}</p>
+        <div>
+          <PaymentBadge status={o.paymentStatus} />
+        </div>
+        {o.comment && (
+          <div className="pt-3">
+            <h3 className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Коментар</h3>
+            <p className="whitespace-pre-line">{o.comment}</p>
+          </div>
+        )}
+        <Link href={`/admin/orders/${o.id}`} className="!mt-4 inline-block border border-foreground px-3 py-1.5 text-xs font-medium hover:bg-foreground hover:text-white">
+          Відкрити та змінити статус
+        </Link>
+      </section>
+    </div>
   );
 }
