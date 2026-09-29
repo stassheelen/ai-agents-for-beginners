@@ -14,14 +14,14 @@ const link = z
   .optional()
   .nullable()
   .transform((v) => v || null)
-  .refine((v) => !v || v.startsWith("/") || /^https?:\/\//.test(v), "Links must start with / or https://");
+  .refine((v) => !v || v.startsWith("/") || /^https?:\/\//.test(v), "Посилання має починатися з / або https://");
 const color = z
   .string()
   .trim()
   .optional()
   .nullable()
   .transform((v) => v || null)
-  .refine((v) => !v || /^#[0-9a-f]{6}$/i.test(v), "Colors must be hex, e.g. #111111");
+  .refine((v) => !v || /^#[0-9a-f]{6}$/i.test(v), "Колір у форматі HEX, напр. #111111");
 
 const SECTION_TYPES = ["HERO", "PRODUCT_CAROUSEL", "PRODUCT_GRID", "CATEGORY_GRID", "IMAGE_TEXT", "BANNER", "COLLECTION", "VIDEO", "TEXT"] as const;
 
@@ -66,7 +66,7 @@ export async function saveSection(input: SectionInput): Promise<ActionResult<{ i
       ? await prisma.homepageSection.update({ where: { id }, data })
       : await prisma.homepageSection.create({ data: { ...data, position: ((await prisma.homepageSection.aggregate({ _max: { position: true } }))._max.position ?? -1) + 1 } });
     invalidateStore();
-    return { ok: true, data: { id: row.id }, message: "Section saved" };
+    return { ok: true, data: { id: row.id }, message: "Секцію збережено" };
   } catch (e) {
     return actionError(e);
   }
@@ -77,7 +77,7 @@ export async function deleteSection(id: string): Promise<ActionResult> {
     await requireAdmin();
     await prisma.homepageSection.delete({ where: { id } });
     invalidateStore();
-    return { ok: true, message: "Section deleted" };
+    return { ok: true, message: "Секцію видалено" };
   } catch (e) {
     return actionError(e);
   }
@@ -91,18 +91,18 @@ export async function duplicateSection(id: string): Promise<ActionResult> {
   try {
     await requireAdmin();
     const s = await prisma.homepageSection.findUnique({ where: { id } });
-    if (!s) return { ok: false, error: "Not found" };
+    if (!s) return { ok: false, error: "Не знайдено" };
     const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = s;
     void _id;
     void _c;
     void _u;
     const all = await prisma.homepageSection.findMany({ orderBy: { position: "asc" }, select: { id: true } });
-    const copy = await prisma.homepageSection.create({ data: { ...rest, config: rest.config as Prisma.InputJsonValue, title: rest.title ? `${rest.title} (copy)` : rest.title, active: false } });
+    const copy = await prisma.homepageSection.create({ data: { ...rest, config: rest.config as Prisma.InputJsonValue, title: rest.title ? `${rest.title} (копія)` : rest.title, active: false } });
     const ids = all.map((x) => x.id);
     ids.splice(ids.indexOf(id) + 1, 0, copy.id);
     await normalizePositions(ids);
     invalidateStore();
-    return { ok: true, message: "Duplicated (inactive)" };
+    return { ok: true, message: "Створено копію (неактивна)" };
   } catch (e) {
     return actionError(e);
   }
@@ -128,7 +128,7 @@ export async function toggleSection(id: string, active: boolean): Promise<Action
     await requireAdmin();
     await prisma.homepageSection.update({ where: { id }, data: { active } });
     invalidateStore();
-    return { ok: true, message: active ? "Section shown" : "Section hidden" };
+    return { ok: true, message: active ? "Секцію показано" : "Секцію приховано" };
   } catch (e) {
     return actionError(e);
   }
@@ -139,7 +139,7 @@ export async function toggleSection(id: string, active: boolean): Promise<Action
 const bannerSchema = z.object({
   id: z.string().optional(),
   placement: z.enum(["ANNOUNCEMENT", "HOMEPAGE", "MEGA_MENU", "CATALOG"]),
-  title: z.string().trim().min(1, "Title is required").max(200),
+  title: z.string().trim().min(1, "Вкажіть заголовок").max(200),
   subtitle: opt(300),
   image: opt(1000),
   mobileImage: opt(1000),
@@ -154,11 +154,11 @@ export async function saveBanner(input: z.input<typeof bannerSchema>): Promise<A
   try {
     await requireAdmin();
     const { id, ...d } = bannerSchema.parse(input);
-    if (d.startsAt && d.endsAt && d.endsAt < d.startsAt) return { ok: false, error: "End date must be after start date" };
+    if (d.startsAt && d.endsAt && d.endsAt < d.startsAt) return { ok: false, error: "Дата завершення має бути пізніше за дату початку" };
     if (id) await prisma.banner.update({ where: { id }, data: d });
     else await prisma.banner.create({ data: { ...d, position: await prisma.banner.count({ where: { placement: d.placement } }) } });
     invalidateStore();
-    return { ok: true, message: "Banner saved" };
+    return { ok: true, message: "Банер збережено" };
   } catch (e) {
     return actionError(e);
   }
@@ -169,7 +169,7 @@ export async function deleteBanner(id: string): Promise<ActionResult> {
     await requireAdmin();
     await prisma.banner.delete({ where: { id } });
     invalidateStore();
-    return { ok: true, message: "Banner deleted" };
+    return { ok: true, message: "Банер видалено" };
   } catch (e) {
     return actionError(e);
   }
@@ -179,7 +179,7 @@ export async function moveBanner(id: string, dir: -1 | 1): Promise<ActionResult>
   try {
     await requireAdmin();
     const b = await prisma.banner.findUnique({ where: { id } });
-    if (!b) return { ok: false, error: "Not found" };
+    if (!b) return { ok: false, error: "Не знайдено" };
     const list = await prisma.banner.findMany({ where: { placement: b.placement }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] });
     const i = list.findIndex((x) => x.id === id);
     if (!list[i + dir]) return { ok: true };
@@ -206,7 +206,7 @@ export async function setReviewStatus(ids: string[], status: "APPROVED" | "REJEC
     await prisma.review.updateMany({ where: { id: { in: ids } }, data: { status } });
     for (const pid of new Set(reviews.map((r) => r.productId))) await recalcRating(pid);
     invalidateStore();
-    return { ok: true, message: `${ids.length} review(s) ${status.toLowerCase()}` };
+    return { ok: true, message: `Відгуків оновлено: ${ids.length}` };
   } catch (e) {
     return actionError(e);
   }
@@ -219,7 +219,7 @@ export async function deleteReviews(ids: string[]): Promise<ActionResult> {
     await prisma.review.deleteMany({ where: { id: { in: ids } } });
     for (const pid of new Set(reviews.map((r) => r.productId))) await recalcRating(pid);
     invalidateStore();
-    return { ok: true, message: "Deleted" };
+    return { ok: true, message: "Видалено" };
   } catch (e) {
     return actionError(e);
   }
@@ -229,7 +229,7 @@ export async function deleteReviews(ids: string[]): Promise<ActionResult> {
 
 const promoSchema = z.object({
   id: z.string().optional(),
-  code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,32}$/, "Code: 3–32 chars, letters/digits/-/_"),
+  code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,32}$/, "Код: 3–32 символи — латинські літери, цифри, - або _"),
   description: opt(200),
   type: z.enum(["PERCENTAGE", "FIXED", "FREE_SHIPPING"]),
   value: z.coerce.number().int().min(0),
@@ -244,11 +244,11 @@ export async function savePromotion(input: z.input<typeof promoSchema>): Promise
   try {
     await requireAdmin();
     const { id, ...d } = promoSchema.parse(input);
-    if (d.type === "PERCENTAGE" && (d.value < 1 || d.value > 100)) return { ok: false, error: "Percentage must be between 1 and 100" };
-    if (d.type === "FIXED" && d.value < 1) return { ok: false, error: "Enter a discount amount" };
+    if (d.type === "PERCENTAGE" && (d.value < 1 || d.value > 100)) return { ok: false, error: "Відсоток має бути від 1 до 100" };
+    if (d.type === "FIXED" && d.value < 1) return { ok: false, error: "Вкажіть суму знижки" };
     if (id) await prisma.promotion.update({ where: { id }, data: d });
     else await prisma.promotion.create({ data: d });
-    return { ok: true, message: "Promotion saved" };
+    return { ok: true, message: "Промокод збережено" };
   } catch (e) {
     return actionError(e);
   }
@@ -258,7 +258,7 @@ export async function deletePromotion(id: string): Promise<ActionResult> {
   try {
     await requireAdmin();
     await prisma.promotion.delete({ where: { id } });
-    return { ok: true, message: "Promotion deleted" };
+    return { ok: true, message: "Промокод видалено" };
   } catch (e) {
     return actionError(e);
   }
@@ -269,7 +269,7 @@ export async function deletePromotion(id: string): Promise<ActionResult> {
 const settingsSchema = z.object({
   storeName: z.string().trim().min(1).max(40),
   tagline: opt(200),
-  accentColor: z.string().regex(/^#[0-9a-f]{6}$/i, "Accent color must be hex"),
+  accentColor: z.string().regex(/^#[0-9a-f]{6}$/i, "Акцентний колір у форматі HEX"),
   currency: z.string().trim().length(3),
   freeShippingThreshold: z.coerce.number().int().min(0),
   shippingFlatRate: z.coerce.number().int().min(0),
@@ -291,7 +291,7 @@ export async function saveSettings(input: z.input<typeof settingsSchema>): Promi
     const d = settingsSchema.parse(input);
     await prisma.settings.upsert({ where: { id: "default" }, update: { ...d, currency: d.currency.toUpperCase() }, create: { id: "default", ...d } });
     invalidateStore();
-    return { ok: true, message: "Settings saved" };
+    return { ok: true, message: "Налаштування збережено" };
   } catch (e) {
     return actionError(e);
   }

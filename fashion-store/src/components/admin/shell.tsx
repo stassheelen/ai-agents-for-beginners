@@ -27,19 +27,19 @@ import { logoutAction } from "@/actions/admin/auth";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/products", label: "Products", icon: Package },
-  { href: "/admin/categories", label: "Categories", icon: FolderTree },
-  { href: "/admin/collections", label: "Collections", icon: Layers },
-  { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
-  { href: "/admin/customers", label: "Customers", icon: Users },
-  { href: "/admin/homepage", label: "Homepage", icon: Home },
-  { href: "/admin/banners", label: "Banners", icon: Megaphone },
-  { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
-  { href: "/admin/promotions", label: "Promotions", icon: Percent },
-  { href: "/admin/inventory", label: "Inventory", icon: Boxes },
-  { href: "/admin/media", label: "Media", icon: ImageIcon },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin", label: "Огляд", icon: LayoutDashboard },
+  { href: "/admin/products", label: "Товари", icon: Package },
+  { href: "/admin/categories", label: "Категорії", icon: FolderTree },
+  { href: "/admin/collections", label: "Колекції", icon: Layers },
+  { href: "/admin/orders", label: "Замовлення", icon: ShoppingCart },
+  { href: "/admin/customers", label: "Клієнти", icon: Users },
+  { href: "/admin/homepage", label: "Головна сторінка", icon: Home },
+  { href: "/admin/banners", label: "Банери", icon: Megaphone },
+  { href: "/admin/reviews", label: "Відгуки", icon: MessageSquare },
+  { href: "/admin/promotions", label: "Промокоди", icon: Percent },
+  { href: "/admin/inventory", label: "Склад", icon: Boxes },
+  { href: "/admin/media", label: "Медіа", icon: ImageIcon },
+  { href: "/admin/settings", label: "Налаштування", icon: Settings },
 ];
 
 export const AdminConfig = React.createContext({ directUpload: false });
@@ -79,31 +79,31 @@ export function AdminShell({ admin, directUpload, children }: { admin: { email: 
           <Link href="/admin" className="font-display text-sm font-semibold tracking-[0.28em]">
             VELLA
           </Link>
-          <span className="ml-2 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">admin</span>
+          <span className="ml-2 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">адмін</span>
         </div>
         {nav}
         <div className="border-t border-border p-3">
           <Link href="/" target="_blank" className="flex items-center gap-3 px-3 py-2 text-muted-foreground hover:text-foreground">
-            <ExternalLink className="size-4" strokeWidth={1.6} /> View store
+            <ExternalLink className="size-4" strokeWidth={1.6} /> Відкрити магазин
           </Link>
           <form action={logoutAction}>
             <button className="flex w-full items-center gap-3 px-3 py-2 text-muted-foreground hover:text-foreground">
-              <LogOut className="size-4" strokeWidth={1.6} /> Sign out
+              <LogOut className="size-4" strokeWidth={1.6} /> Вийти
             </button>
           </form>
           <p className="truncate px-3 pt-2 text-[11px] text-muted-foreground" title={admin.email}>
-            {admin.email} · {admin.role.toLowerCase()}
+            {admin.email} · {({ OWNER: "власник", ADMIN: "адміністратор", EDITOR: "редактор" } as Record<string, string>)[admin.role] ?? admin.role}
           </p>
         </div>
       </aside>
 
       {/* Mobile top bar */}
       <div className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-white px-4 lg:hidden">
-        <button onClick={() => setOpen(true)} aria-label="Menu" className="-ml-2 p-2">
+        <button onClick={() => setOpen(true)} aria-label="Меню" className="-ml-2 p-2">
           <Menu className="size-5" />
         </button>
         <span className="font-display text-sm font-semibold tracking-[0.28em]">VELLA</span>
-        <Link href="/" target="_blank" aria-label="View store" className="p-2">
+        <Link href="/" target="_blank" aria-label="Відкрити магазин" className="p-2">
           <ExternalLink className="size-4" />
         </Link>
       </div>
@@ -113,14 +113,14 @@ export function AdminShell({ admin, directUpload, children }: { admin: { email: 
           <div className="absolute inset-y-0 left-0 flex w-64 flex-col overflow-y-auto bg-white animate-slide-in-left">
             <div className="flex h-14 items-center justify-between border-b border-border px-5">
               <span className="font-display text-sm font-semibold tracking-[0.28em]">VELLA</span>
-              <button onClick={() => setOpen(false)} aria-label="Close">
+              <button onClick={() => setOpen(false)} aria-label="Закрити">
                 <X className="size-5" />
               </button>
             </div>
             {nav}
             <form action={logoutAction} className="border-t border-border p-3">
               <button className="flex w-full items-center gap-3 px-3 py-2 text-muted-foreground">
-                <LogOut className="size-4" /> Sign out
+                <LogOut className="size-4" /> Вийти
               </button>
             </form>
           </div>

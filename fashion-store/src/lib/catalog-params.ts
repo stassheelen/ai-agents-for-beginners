@@ -53,8 +53,8 @@ export const SORT_LABELS: Record<CatalogSort, string> = {
 };
 
 export const FLAG_TITLES: Record<string, string> = {
-  new: "New arrivals",
-  sale: "Sale",
-  bestseller: "Best sellers",
-  featured: "Trending",
+  new: "Новинки",
+  sale: "Розпродаж",
+  bestseller: "Бестселери",
+  featured: "У тренді",
 };

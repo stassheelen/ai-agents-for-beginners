@@ -167,14 +167,14 @@ async function main() {
   }
   for (const combo of combos) {
     const [type, color] = combo.split("|") as [GarmentType, string];
-    const hex = DEMO_COLORS.find((c) => c.name === color)!.hex;
+    const hex = DEMO_COLORS.find((c) => c.key === color)!.hex;
     for (const view of [0, 1] as const) {
       await writeWebp(productSvg(type, hex, view), imageName(type, color, view));
       count++;
     }
   }
 
-  const c = (n: string) => DEMO_COLORS.find((x) => x.name === n)!.hex;
+  const c = (n: string) => DEMO_COLORS.find((x) => x.key === n)!.hex;
   const editorials: { file: string; w: number; h: number; spec: Parameters<typeof editorialSvg>[2] }[] = [
     {
       file: "hero-desktop.webp",

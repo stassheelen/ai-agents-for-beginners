@@ -24,7 +24,7 @@ export function CollectionsManager({ collections }: { collections: (Col & { id: 
     <>
       <div className="mb-4 flex justify-end">
         <Button size="sm" onClick={() => setEditing({ ...EMPTY })}>
-          <Plus /> Add collection
+          <Plus /> Додати колекцію
         </Button>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -33,25 +33,25 @@ export function CollectionsManager({ collections }: { collections: (Col & { id: 
             <div className="relative aspect-[16/9] bg-muted">{c.heroImage && <Image src={c.heroImage} alt="" fill sizes="400px" className="object-cover" />}</div>
             <div className="flex flex-1 flex-col p-4">
               <p className="font-medium">
-                {c.name} {!c.published && <Badge variant="warning">hidden</Badge>}
+                {c.name} {!c.published && <Badge variant="warning">приховано</Badge>}
               </p>
               <p className="text-[11px] text-muted-foreground">
-                /collections/{c.slug} · {c.products.length} products
+                /collections/{c.slug} · товарів: {c.products.length}
               </p>
               <div className="mt-auto flex items-center gap-0.5 pt-3">
-                <button className="p-1.5 hover:bg-muted" disabled={pending} onClick={() => run(() => moveCollection(c.id, -1), { silent: true })} aria-label="Move up">
+                <button className="p-1.5 hover:bg-muted" disabled={pending} onClick={() => run(() => moveCollection(c.id, -1), { silent: true })} aria-label="Вгору">
                   <ArrowUp className="size-4" />
                 </button>
-                <button className="p-1.5 hover:bg-muted" disabled={pending} onClick={() => run(() => moveCollection(c.id, 1), { silent: true })} aria-label="Move down">
+                <button className="p-1.5 hover:bg-muted" disabled={pending} onClick={() => run(() => moveCollection(c.id, 1), { silent: true })} aria-label="Вниз">
                   <ArrowDown className="size-4" />
                 </button>
-                <a href={`/collections/${c.slug}`} target="_blank" className="p-1.5 hover:bg-muted" aria-label="View">
+                <a href={`/collections/${c.slug}`} target="_blank" className="p-1.5 hover:bg-muted" aria-label="Переглянути">
                   <ExternalLink className="size-4" />
                 </a>
-                <button className="ml-auto p-1.5 hover:bg-muted" onClick={() => setEditing({ ...c })} aria-label="Edit">
+                <button className="ml-auto p-1.5 hover:bg-muted" onClick={() => setEditing({ ...c })} aria-label="Редагувати">
                   <Pencil className="size-4" />
                 </button>
-                <button className="p-1.5 hover:bg-muted hover:text-destructive" onClick={() => confirm(`Delete “${c.name}”? Products are not deleted.`) && run(() => deleteCollection(c.id))} aria-label="Delete">
+                <button className="p-1.5 hover:bg-muted hover:text-destructive" onClick={() => confirm(`Видалити «${c.name}»? Товари не буде видалено.`) && run(() => deleteCollection(c.id))} aria-label="Видалити">
                   <Trash2 className="size-4" />
                 </button>
               </div>
@@ -61,7 +61,7 @@ export function CollectionsManager({ collections }: { collections: (Col & { id: 
       </div>
       <Dialog open={Boolean(editing)} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="max-w-3xl">
-          <DialogTitle>{editing?.id ? "Edit collection" : "New collection"}</DialogTitle>
+          <DialogTitle>{editing?.id ? "Редагування колекції" : "Нова колекція"}</DialogTitle>
           {editing && (
             <form
               className="mt-5 space-y-4"
@@ -73,42 +73,42 @@ export function CollectionsManager({ collections }: { collections: (Col & { id: 
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Name *</Label>
+                  <Label>Назва *</Label>
                   <Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value, slug: editing.id ? editing.slug : slugify(e.target.value) })} required />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Slug</Label>
+                  <Label>Адреса (slug)</Label>
                   <Input value={editing.slug} onChange={(e) => setEditing({ ...editing, slug: slugify(e.target.value) })} />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Description</Label>
+                <Label>Опис</Label>
                 <Textarea value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} className="min-h-20" />
               </div>
-              <MediaField label="Hero image" value={editing.heroImage} onChange={(v) => setEditing({ ...editing, heroImage: v })} />
+              <MediaField label="Головне зображення" value={editing.heroImage} onChange={(v) => setEditing({ ...editing, heroImage: v })} />
               <div className="space-y-1.5">
-                <Label>Products</Label>
+                <Label>Товари</Label>
                 <ProductPicker value={editing.products} onChange={(products) => setEditing({ ...editing, products })} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>SEO title</Label>
+                  <Label>SEO-заголовок</Label>
                   <Input value={editing.seoTitle} onChange={(e) => setEditing({ ...editing, seoTitle: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>SEO description</Label>
+                  <Label>SEO-опис</Label>
                   <Input value={editing.seoDescription} onChange={(e) => setEditing({ ...editing, seoDescription: e.target.value })} />
                 </div>
               </div>
               <label className="flex items-center gap-2">
-                <Switch checked={editing.published} onCheckedChange={(v) => setEditing({ ...editing, published: v })} /> Published
+                <Switch checked={editing.published} onCheckedChange={(v) => setEditing({ ...editing, published: v })} /> Опубліковано
               </label>
               <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="ghost" onClick={() => setEditing(null)}>
-                  Cancel
+                  Скасувати
                 </Button>
                 <Button type="submit" disabled={pending}>
-                  Save
+                  Зберегти
                 </Button>
               </div>
             </form>

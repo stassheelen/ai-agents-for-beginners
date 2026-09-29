@@ -10,7 +10,7 @@ import { searchSuggestions, type SearchSuggestions } from "@/actions/catalog";
 import { formatMoney } from "@/lib/utils";
 import { useStore } from "./store-context";
 
-const POPULAR = ["Leggings", "Hoodie", "Sports bra", "Black", "Sweatpants", "Cap"];
+const POPULAR = ["Легінси", "Худі", "Спортивний топ", "Чорний", "Штани", "Кепка"];
 
 export function SearchOverlay() {
   const { searchOpen, setSearchOpen } = useStore();

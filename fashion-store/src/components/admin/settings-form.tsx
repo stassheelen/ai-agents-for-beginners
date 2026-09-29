@@ -39,36 +39,36 @@ export function SettingsForm({ initial, integrations }: { initial: S; integratio
     >
       <Card>
         <CardHeader>
-          <CardTitle>Store</CardTitle>
+          <CardTitle>Магазин</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            {field("storeName", "Store name (logo text)")}
-            {field("tagline", "Tagline")}
-            <ColorInput label="Accent color (announcement bar, accent buttons)" value={f.accentColor} onChange={(v) => setF({ ...f, accentColor: v })} />
-            {field("currency", "Currency", { maxLength: 3 })}
-            {field("contactEmail", "Contact email", { type: "email" })}
-            {field("contactPhone", "Contact phone")}
-            {field("instagramUrl", "Instagram URL")}
+            {field("storeName", "Назва магазину (текст логотипа)")}
+            {field("tagline", "Слоган")}
+            <ColorInput label="Акцентний колір (рядок оголошень, акцентні кнопки)" value={f.accentColor} onChange={(v) => setF({ ...f, accentColor: v })} />
+            {field("currency", "Валюта", { maxLength: 3 })}
+            {field("contactEmail", "Email для звʼязку", { type: "email" })}
+            {field("contactPhone", "Телефон для звʼязку")}
+            {field("instagramUrl", "Посилання на Instagram")}
           </div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Shipping & inventory</CardTitle>
+          <CardTitle>Доставка та склад</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-3">
-            {field("freeShippingThreshold", "Free shipping from (₴)", { inputMode: "decimal" })}
-            {field("shippingFlatRate", "Shipping cost (₴)", { inputMode: "decimal" })}
-            {field("lowStockThreshold", "Low stock threshold", { inputMode: "numeric" })}
+            {field("freeShippingThreshold", "Безкоштовна доставка від (₴)", { inputMode: "decimal" })}
+            {field("shippingFlatRate", "Вартість доставки (₴)", { inputMode: "decimal" })}
+            {field("lowStockThreshold", "Поріг «закінчується»", { inputMode: "numeric" })}
           </div>
           <div className="space-y-2 border-t border-border pt-4">
-            <p className="text-xs font-medium">Integrations</p>
+            <p className="text-xs font-medium">Інтеграції</p>
             {integrations.map((i) => (
               <p key={i.name} className="flex items-center gap-2 text-xs">
                 {i.ok ? <CheckCircle2 className="size-4 text-success" /> : <CircleDashed className="size-4 text-muted-foreground" />}
-                {i.name} <span className="text-muted-foreground">{i.ok ? "connected" : `— set ${i.hint}`}</span>
+                {i.name} <span className="text-muted-foreground">{i.ok ? "підключено" : `— задайте ${i.hint}`}</span>
               </p>
             ))}
           </div>
@@ -76,27 +76,27 @@ export function SettingsForm({ initial, integrations }: { initial: S; integratio
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>SEO defaults</CardTitle>
+          <CardTitle>SEO за замовчуванням</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {field("seoTitle", "Homepage title")}
+          {field("seoTitle", "Заголовок головної сторінки")}
           <div className="space-y-1.5">
-            <Label>Homepage description</Label>
+            <Label>Опис головної сторінки</Label>
             <Textarea value={f.seoDescription} onChange={(e) => setF({ ...f, seoDescription: e.target.value })} className="min-h-20" />
           </div>
-          <MediaField label="Default OG image" value={f.ogImage} onChange={(v) => setF({ ...f, ogImage: v ?? "" })} />
+          <MediaField label="OG-зображення за замовчуванням" value={f.ogImage} onChange={(v) => setF({ ...f, ogImage: v ?? "" })} />
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Content</CardTitle>
+          <CardTitle>Інформаційні тексти</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {(
             [
-              ["sizeGuide", "Size guide (product page + /help/size-guide)"],
-              ["deliveryInfo", "Delivery info (/help/delivery)"],
-              ["returnsInfo", "Returns info (/help/returns)"],
+              ["sizeGuide", "Таблиця розмірів (сторінка товару + /help/size-guide)"],
+              ["deliveryInfo", "Доставка (/help/delivery)"],
+              ["returnsInfo", "Повернення (/help/returns)"],
             ] as const
           ).map(([k, label]) => (
             <div key={k} className="space-y-1.5">
@@ -108,7 +108,7 @@ export function SettingsForm({ initial, integrations }: { initial: S; integratio
       </Card>
       <div className="xl:col-span-2">
         <Button type="submit" disabled={pending}>
-          Save settings
+          Зберегти налаштування
         </Button>
       </div>
     </form>

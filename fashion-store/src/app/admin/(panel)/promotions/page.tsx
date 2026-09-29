@@ -2,13 +2,13 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/admin/shell";
 import { PromotionsManager } from "@/components/admin/promotions-manager";
 
-export const metadata = { title: "Promotions" };
+export const metadata = { title: "Промокоди" };
 
 export default async function PromotionsPage() {
   const promos = await prisma.promotion.findMany({ orderBy: { createdAt: "desc" } });
   return (
     <>
-      <PageHeader title="Promotions" description="Promo codes applied by customers at checkout." />
+      <PageHeader title="Промокоди" description="Промокоди, які покупці вводять під час оформлення замовлення." />
       <PromotionsManager
         promotions={promos.map((p) => ({
           id: p.id,

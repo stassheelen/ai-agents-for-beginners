@@ -23,17 +23,17 @@ export default async function ShopPage(props: PageProps<"/shop">) {
       title={title}
       breadcrumbs={[
         { name: "Головна", href: "/" },
-        { name: "Shop", href: "/shop" },
+        { name: "Каталог", href: "/shop" },
         ...(params.flag ? [{ name: title, href: `/shop?flag=${params.flag}` }] : []),
       ]}
       scope={{ flag: params.flag }}
       params={params}
       subnav={[
         { name: "Усі", href: "/shop", active: !params.flag },
-        { name: "New", href: "/shop?flag=new", active: params.flag === "new" },
-        { name: "Best sellers", href: "/shop?flag=bestseller", active: params.flag === "bestseller" },
+        { name: "Новинки", href: "/shop?flag=new", active: params.flag === "new" },
+        { name: "Бестселери", href: "/shop?flag=bestseller", active: params.flag === "bestseller" },
         ...nav.categories.map((c) => ({ name: c.name, href: `/shop/${c.slug}` })),
-        { name: "Sale", href: "/shop?flag=sale", active: params.flag === "sale" },
+        { name: "Розпродаж", href: "/shop?flag=sale", active: params.flag === "sale" },
       ]}
     />
   );

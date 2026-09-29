@@ -44,12 +44,12 @@ export const blobEnabled = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN);
  */
 async function validateBuffer(buffer: Buffer) {
   const detected = sniff(buffer);
-  if (!detected) throw new UploadError("Unsupported or corrupted file (allowed: JPG, PNG, WEBP, AVIF, GIF, MP4, WEBM)");
+  if (!detected) throw new UploadError("Непідтримуваний або пошкоджений файл (дозволено: JPG, PNG, WEBP, AVIF, GIF, MP4, WEBM)");
   const isImage = detected in IMAGE_TYPES;
   const isVideo = detected in VIDEO_TYPES;
-  if (!isImage && !isVideo) throw new UploadError("Unsupported file type");
-  if (isImage && buffer.length > MAX_IMAGE_BYTES) throw new UploadError("Image is larger than 8 MB");
-  if (isVideo && buffer.length > MAX_VIDEO_BYTES) throw new UploadError("Video is larger than 50 MB");
+  if (!isImage && !isVideo) throw new UploadError("Непідтримуваний тип файлу");
+  if (isImage && buffer.length > MAX_IMAGE_BYTES) throw new UploadError("Зображення більше 8 МБ");
+  if (isVideo && buffer.length > MAX_VIDEO_BYTES) throw new UploadError("Відео більше 50 МБ");
 
   let width: number | undefined;
   let height: number | undefined;
@@ -60,7 +60,7 @@ async function validateBuffer(buffer: Buffer) {
       height = meta.height;
       if (!width || !height || width > 12000 || height > 12000) throw new Error("bad dimensions");
     } catch {
-      throw new UploadError("File is not a valid image");
+      throw new UploadError("Файл не є коректним зображенням");
     }
   }
   return { detected, isImage, width, height };
@@ -83,7 +83,7 @@ export async function storeFile(input: { buffer: Buffer; filename: string; decla
     const blob = await put(key, buffer, { access: "public", contentType: detected, addRandomSuffix: false });
     url = blob.url;
   } else {
-    if (process.env.VERCEL) throw new UploadError("BLOB_READ_WRITE_TOKEN is not configured");
+    if (process.env.VERCEL) throw new UploadError("Не налаштовано BLOB_READ_WRITE_TOKEN");
     const dir = path.join(process.cwd(), "public", "uploads", "media");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(process.cwd(), "public", "uploads", key), buffer);
@@ -111,9 +111,9 @@ export async function importRemoteFile(rawUrl: string, alt?: string) {
   try {
     url = new URL(rawUrl);
   } catch {
-    throw new UploadError(`Invalid URL: ${rawUrl}`);
+    throw new UploadError(`Некоректне посилання: ${rawUrl}`);
   }
-  if (url.protocol !== "https:" && url.protocol !== "http:") throw new UploadError("Only http(s) URLs are allowed");
+  if (url.protocol !== "https:" && url.protocol !== "http:") throw new UploadError("Дозволені лише посилання http(s)");
   const host = url.hostname;
   if (
     host === "localhost" ||
@@ -121,7 +121,7 @@ export async function importRemoteFile(rawUrl: string, alt?: string) {
     host.endsWith(".internal") ||
     host === "[::1]"
   ) {
-    throw new UploadError("Private network URLs are not allowed");
+    throw new UploadError("Посилання на приватну мережу заборонені");
   }
 
   // Already stored by us (or imported before) — reuse
@@ -132,16 +132,16 @@ export async function importRemoteFile(rawUrl: string, alt?: string) {
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
     const res = await fetch(url, { signal: controller.signal, redirect: "follow" });
-    if (!res.ok) throw new UploadError(`Download failed (${res.status}) for ${rawUrl}`);
+    if (!res.ok) throw new UploadError(`Не вдалося завантажити (${res.status}): ${rawUrl}`);
     const len = Number(res.headers.get("content-length") || 0);
-    if (len > MAX_IMAGE_BYTES) throw new UploadError("Remote image is larger than 8 MB");
+    if (len > MAX_IMAGE_BYTES) throw new UploadError("Зображення за посиланням більше 8 МБ");
     const buffer = Buffer.from(await res.arrayBuffer());
     const filename = path.basename(url.pathname) || "image";
     const media = await storeFile({ buffer, filename, alt });
     return prisma.media.update({ where: { id: media.id }, data: { sourceUrl: rawUrl } });
   } catch (e) {
     if (e instanceof UploadError) throw e;
-    throw new UploadError(`Could not download ${rawUrl}`);
+    throw new UploadError(`Не вдалося завантажити ${rawUrl}`);
   } finally {
     clearTimeout(timer);
   }
@@ -166,11 +166,11 @@ export async function deleteStoredFile(url: string) {
  */
 export async function registerBlobUpload(url: string, filename: string) {
   const parsed = new URL(url);
-  if (!parsed.hostname.endsWith(".public.blob.vercel-storage.com")) throw new UploadError("Unknown storage host");
+  if (!parsed.hostname.endsWith(".public.blob.vercel-storage.com")) throw new UploadError("Невідоме сховище");
   const existing = await prisma.media.findUnique({ where: { url } });
   if (existing) return existing;
   const res = await fetch(url);
-  if (!res.ok) throw new UploadError("Uploaded file not found");
+  if (!res.ok) throw new UploadError("Завантажений файл не знайдено");
   const buffer = Buffer.from(await res.arrayBuffer());
   try {
     const { detected, isImage, width, height } = await validateBuffer(buffer);

@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/admin/shell";
 import { AdminFilters, Pagination } from "@/components/admin/filters";
 import { InventoryTable } from "@/components/admin/inventory-table";
 
-export const metadata = { title: "Inventory" };
+export const metadata = { title: "Склад" };
 const PER_PAGE = 50;
 
 export default async function InventoryPage(props: PageProps<"/admin/inventory">) {
@@ -31,10 +31,10 @@ export default async function InventoryPage(props: PageProps<"/admin/inventory">
   ]);
   return (
     <>
-      <PageHeader title="Inventory" description={`${total} variants · ${sum._sum.stock ?? 0} units in stock · low stock ≤ ${settings.lowStockThreshold}`} />
+      <PageHeader title="Склад" description={`Варіантів: ${total} · на складі: ${sum._sum.stock ?? 0} шт. · закінчується: ≤ ${settings.lowStockThreshold}`} />
       <AdminFilters
-        search={{ placeholder: "SKU or product…" }}
-        selects={[{ name: "stock", label: "All stock levels", options: [{ value: "in", label: "In stock" }, { value: "low", label: "Low stock" }, { value: "out", label: "Out of stock" }] }]}
+        search={{ placeholder: "Артикул або товар…" }}
+        selects={[{ name: "stock", label: "Усі залишки", options: [{ value: "in", label: "В наявності" }, { value: "low", label: "Закінчується" }, { value: "out", label: "Немає в наявності" }] }]}
       />
       <InventoryTable
         variants={variants.map((v) => ({ id: v.id, sku: v.sku, size: v.size, stock: v.stock, color: v.color, productId: v.product.id, productName: v.product.name, status: v.product.status }))}

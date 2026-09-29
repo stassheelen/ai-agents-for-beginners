@@ -20,20 +20,20 @@ export function ReviewsTable({ reviews }: { reviews: Review[] }) {
     setPrevReviews(reviews);
     setSel([]);
   }
-  if (!reviews.length) return <Card><EmptyState title="No reviews here" /></Card>;
+  if (!reviews.length) return <Card><EmptyState title="Відгуків немає" /></Card>;
   return (
     <Card>
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2.5">
-        <Checkbox checked={sel.length === reviews.length} onCheckedChange={(v) => setSel(v ? reviews.map((r) => r.id) : [])} aria-label="Select all" />
-        <span className="text-xs text-muted-foreground">{sel.length} selected</span>
+        <Checkbox checked={sel.length === reviews.length} onCheckedChange={(v) => setSel(v ? reviews.map((r) => r.id) : [])} aria-label="Вибрати всі" />
+        <span className="text-xs text-muted-foreground">Вибрано: {sel.length}</span>
         <Button size="sm" variant="outline" className="h-8" disabled={!sel.length || pending} onClick={() => run(() => setReviewStatus(sel, "APPROVED"))}>
-          <Check /> Approve
+          <Check /> Схвалити
         </Button>
         <Button size="sm" variant="outline" className="h-8" disabled={!sel.length || pending} onClick={() => run(() => setReviewStatus(sel, "REJECTED"))}>
-          <X /> Reject
+          <X /> Відхилити
         </Button>
-        <Button size="sm" variant="ghost" className="h-8" disabled={!sel.length || pending} onClick={() => confirm("Delete selected reviews?") && run(() => deleteReviews(sel))}>
-          <Trash2 /> Delete
+        <Button size="sm" variant="ghost" className="h-8" disabled={!sel.length || pending} onClick={() => confirm("Видалити вибрані відгуки?") && run(() => deleteReviews(sel))}>
+          <Trash2 /> Видалити
         </Button>
       </div>
       <ul className="divide-y divide-border">
@@ -53,10 +53,10 @@ export function ReviewsTable({ reviews }: { reviews: Review[] }) {
             </div>
             <div className="flex shrink-0 gap-1">
               {r.status !== "APPROVED" && (
-                <button className="p-1.5 hover:bg-muted" onClick={() => run(() => setReviewStatus([r.id], "APPROVED"))} aria-label="Approve"><Check className="size-4" /></button>
+                <button className="p-1.5 hover:bg-muted" onClick={() => run(() => setReviewStatus([r.id], "APPROVED"))} aria-label="Схвалити"><Check className="size-4" /></button>
               )}
               {r.status !== "REJECTED" && (
-                <button className="p-1.5 hover:bg-muted" onClick={() => run(() => setReviewStatus([r.id], "REJECTED"))} aria-label="Reject"><X className="size-4" /></button>
+                <button className="p-1.5 hover:bg-muted" onClick={() => run(() => setReviewStatus([r.id], "REJECTED"))} aria-label="Відхилити"><X className="size-4" /></button>
               )}
             </div>
           </li>

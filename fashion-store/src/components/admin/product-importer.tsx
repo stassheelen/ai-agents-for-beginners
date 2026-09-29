@@ -22,6 +22,8 @@ type Preview = {
 };
 type Result = { created: number; updated: number; skipped: number; errors: number; errorRows: { row: number; sku: string; error: string }[]; warnings: { row: number; sku: string; warning: string }[] };
 
+const ACTION_LABELS = { all: "Усі", create: "Створення", update: "Оновлення", duplicate: "Дублікат", error: "Помилка" } as const;
+
 function downloadCsv(name: string, rows: (string | number)[][]) {
   const blob = new Blob(["﻿" + Papa.unparse(rows)], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -47,13 +49,13 @@ export function ProductImporter({ columns }: { columns: string[] }) {
     fd.append("mode", mode);
     const res = await fetch("/api/admin/import", { method: "POST", body: fd });
     const json = await res.json();
-    if (!res.ok) throw new Error(json.error ?? "Request failed");
+    if (!res.ok) throw new Error(json.error ?? "Помилка запиту");
     return json;
   };
 
   const onFile = async (f: File | undefined) => {
     if (!f) return;
-    if (!/\.(csv|xlsx)$/i.test(f.name)) return toast.error("Upload a .csv or .xlsx file");
+    if (!/\.(csv|xlsx)$/i.test(f.name)) return toast.error("Завантажте файл .csv або .xlsx");
     setFile(f);
     setPreview(null);
     setResult(null);
@@ -62,7 +64,7 @@ export function ProductImporter({ columns }: { columns: string[] }) {
       const json = await send(f, "preview");
       setPreview(json.preview);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not read file");
+      toast.error(e instanceof Error ? e.message : "Не вдалося прочитати файл");
       setFile(null);
     } finally {
       setBusy(null);
@@ -76,9 +78,9 @@ export function ProductImporter({ columns }: { columns: string[] }) {
       const json = await send(file, "commit");
       setResult(json.result);
       setPreview(null);
-      toast.success("Import finished");
+      toast.success("Імпорт завершено");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Import failed");
+      toast.error(e instanceof Error ? e.message : "Помилка імпорту");
     } finally {
       setBusy(null);
     }
@@ -113,30 +115,30 @@ export function ProductImporter({ columns }: { columns: string[] }) {
             className={cn("flex min-h-64 cursor-pointer flex-col items-center justify-center gap-3 border border-dashed border-input bg-white p-10 text-center hover:border-foreground", over && "border-foreground bg-muted")}
           >
             {busy === "preview" ? <Loader2 className="size-7 animate-spin" /> : <FileSpreadsheet className="size-7" strokeWidth={1.4} />}
-            <p className="text-sm font-medium">{busy === "preview" ? `Reading ${file?.name}…` : "Drop CSV or XLSX here, or click to choose"}</p>
-            <p className="text-xs text-muted-foreground">Up to 5,000 rows · 10 MB. One row per variant (color / size).</p>
+            <p className="text-sm font-medium">{busy === "preview" ? `Читаємо ${file?.name}…` : "Перетягніть CSV або XLSX сюди або натисніть, щоб вибрати"}</p>
+            <p className="text-xs text-muted-foreground">До 5 000 рядків · 10 МБ. Один рядок — один варіант (колір / розмір).</p>
             <input ref={input} type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
           </div>
           <Card>
             <CardHeader>
-              <CardTitle>File format</CardTitle>
+              <CardTitle>Формат файлу</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-xs">
               <div className="flex gap-2">
                 <Button asChild size="sm" variant="outline">
                   <a href="/api/admin/import/template?format=csv">
-                    <Download /> CSV template
+                    <Download /> Шаблон CSV
                   </a>
                 </Button>
                 <Button asChild size="sm" variant="outline">
                   <a href="/api/admin/import/template?format=xlsx">
-                    <Download /> XLSX template
+                    <Download /> Шаблон XLSX
                   </a>
                 </Button>
               </div>
               <p className="text-muted-foreground">
-                Required: <strong className="text-foreground">SKU, Product Name, Price</strong>. Rows with the same <strong className="text-foreground">Parent SKU</strong> (or the same name) are grouped into one product.
-                Image URLs are downloaded and stored in Vercel Blob; separate several with commas.
+                Обовʼязково: <strong className="text-foreground">Артикул, Назва, Ціна</strong>. Рядки з однаковим <strong className="text-foreground">Артикулом моделі</strong> (або однаковою назвою) обʼєднуються в один товар.
+                Фото за посиланнями завантажуються у Vercel Blob; кілька посилань розділяйте комами. Колонки можна називати українською або англійською.
               </p>
               <div className="flex flex-wrap gap-1">
                 {columns.map((c) => (
@@ -154,38 +156,38 @@ export function ProductImporter({ columns }: { columns: string[] }) {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Preview · {file?.name}</CardTitle>
+              <CardTitle>Попередній перегляд · {file?.name}</CardTitle>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={reset} disabled={Boolean(busy)}>
-                  Cancel
+                  Скасувати
                 </Button>
                 <Button size="sm" onClick={confirmImport} disabled={Boolean(busy) || preview.totalRows === preview.errors + preview.duplicates}>
-                  {busy === "commit" ? <Loader2 className="animate-spin" /> : <Upload />} Confirm import
+                  {busy === "commit" ? <Loader2 className="animate-spin" /> : <Upload />} Підтвердити імпорт
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                <Stat label="Rows" value={preview.totalRows} />
-                <Stat label="New products" value={preview.newProducts} tone="success" />
-                <Stat label="Products to update" value={preview.updatedProducts} />
-                <Stat label="Variants new / upd." value={`${preview.newVariants} / ${preview.updatedVariants}`} />
-                <Stat label="Duplicates" value={preview.duplicates} tone={preview.duplicates ? "warning" : undefined} />
-                <Stat label="Errors" value={preview.errors} tone={preview.errors ? "danger" : undefined} />
+                <Stat label="Рядків" value={preview.totalRows} />
+                <Stat label="Нових товарів" value={preview.newProducts} tone="success" />
+                <Stat label="Буде оновлено" value={preview.updatedProducts} />
+                <Stat label="Варіанти нові / оновл." value={`${preview.newVariants} / ${preview.updatedVariants}`} />
+                <Stat label="Дублікати" value={preview.duplicates} tone={preview.duplicates ? "warning" : undefined} />
+                <Stat label="Помилки" value={preview.errors} tone={preview.errors ? "danger" : undefined} />
               </div>
               {preview.unknownColumns.length > 0 && (
                 <p className="mt-4 flex items-center gap-2 text-xs text-[#9a6200]">
-                  <AlertTriangle className="size-4" /> Ignored columns: {preview.unknownColumns.join(", ")}
+                  <AlertTriangle className="size-4" /> Невідомі колонки (пропущено): {preview.unknownColumns.join(", ")}
                 </p>
               )}
-              {busy === "commit" && <p className="mt-4 text-xs text-muted-foreground">Importing… downloading images can take a while for large files. Keep this tab open.</p>}
+              {busy === "commit" && <p className="mt-4 text-xs text-muted-foreground">Імпортуємо… завантаження фото для великих файлів може тривати кілька хвилин. Не закривайте вкладку.</p>}
             </CardContent>
           </Card>
           <Card>
             <div className="flex flex-wrap items-center gap-1 border-b border-border px-4 py-2.5">
               {(["all", "create", "update", "duplicate", "error"] as const).map((f) => (
-                <button key={f} onClick={() => setFilter(f)} className={cn("px-3 py-1 text-xs capitalize", filter === f ? "bg-foreground text-white" : "hover:bg-muted")}>
-                  {f}
+                <button key={f} onClick={() => setFilter(f)} className={cn("px-3 py-1 text-xs", filter === f ? "bg-foreground text-white" : "hover:bg-muted")}>
+                  {ACTION_LABELS[f]}
                 </button>
               ))}
               {preview.errors + preview.duplicates > 0 && (
@@ -193,23 +195,23 @@ export function ProductImporter({ columns }: { columns: string[] }) {
                   variant="ghost"
                   size="sm"
                   className="ml-auto h-8"
-                  onClick={() => downloadCsv("import-errors.csv", [["Row", "SKU", "Product", "Problem"], ...preview.rows.filter((r) => r.action === "error" || r.action === "duplicate").map((r) => [r.row, r.sku, r.name, r.message ?? ""])])}
+                  onClick={() => downloadCsv("pomylky-importu.csv", [["Рядок", "Артикул", "Товар", "Проблема"], ...preview.rows.filter((r) => r.action === "error" || r.action === "duplicate").map((r) => [r.row, r.sku, r.name, r.message ?? ""])])}
                 >
-                  <Download /> Error report
+                  <Download /> Звіт про помилки
                 </Button>
               )}
             </div>
             <Table>
               <THead>
                 <tr>
-                  <TH>Row</TH>
-                  <TH>Action</TH>
-                  <TH>SKU</TH>
-                  <TH>Product</TH>
-                  <TH>Color / Size</TH>
-                  <TH>Price</TH>
-                  <TH>Stock</TH>
-                  <TH>Note</TH>
+                  <TH>Рядок</TH>
+                  <TH>Дія</TH>
+                  <TH>Артикул</TH>
+                  <TH>Товар</TH>
+                  <TH>Колір / Розмір</TH>
+                  <TH>Ціна</TH>
+                  <TH>Залишок</TH>
+                  <TH>Примітка</TH>
                 </tr>
               </THead>
               <tbody>
@@ -217,7 +219,7 @@ export function ProductImporter({ columns }: { columns: string[] }) {
                   <TR key={r.row}>
                     <TD className="text-muted-foreground">{r.row}</TD>
                     <TD>
-                      <Badge variant={r.action === "create" ? "success" : r.action === "update" ? "muted" : r.action === "duplicate" ? "warning" : "danger"}>{r.action}</Badge>
+                      <Badge variant={r.action === "create" ? "success" : r.action === "update" ? "muted" : r.action === "duplicate" ? "warning" : "danger"}>{ACTION_LABELS[r.action]}</Badge>
                     </TD>
                     <TD className="font-mono text-xs">{r.sku}</TD>
                     <TD>{r.name}</TD>
@@ -229,7 +231,7 @@ export function ProductImporter({ columns }: { columns: string[] }) {
                 ))}
               </tbody>
             </Table>
-            {rows.length > 300 && <p className="px-4 py-3 text-xs text-muted-foreground">Showing first 300 of {rows.length} rows.</p>}
+            {rows.length > 300 && <p className="px-4 py-3 text-xs text-muted-foreground">Показано перші 300 з {rows.length} рядків.</p>}
           </Card>
         </>
       )}
@@ -238,23 +240,23 @@ export function ProductImporter({ columns }: { columns: string[] }) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="size-4" /> Import complete
+              <CheckCircle2 className="size-4" /> Імпорт завершено
             </CardTitle>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={reset}>
-                Import another file
+                Імпортувати інший файл
               </Button>
               <Button asChild size="sm">
-                <Link href="/admin/products">View products</Link>
+                <Link href="/admin/products">До товарів</Link>
               </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat label="Created" value={result.created} tone="success" />
-              <Stat label="Updated" value={result.updated} />
-              <Stat label="Skipped" value={result.skipped} tone={result.skipped ? "warning" : undefined} />
-              <Stat label="Errors" value={result.errors} tone={result.errors ? "danger" : undefined} />
+              <Stat label="Створено" value={result.created} tone="success" />
+              <Stat label="Оновлено" value={result.updated} />
+              <Stat label="Пропущено" value={result.skipped} tone={result.skipped ? "warning" : undefined} />
+              <Stat label="Помилки" value={result.errors} tone={result.errors ? "danger" : undefined} />
             </div>
             {(result.errorRows.length > 0 || result.warnings.length > 0) && (
               <div>
@@ -262,24 +264,24 @@ export function ProductImporter({ columns }: { columns: string[] }) {
                   size="sm"
                   variant="outline"
                   onClick={() =>
-                    downloadCsv("import-error-report.csv", [
-                      ["Row", "SKU", "Type", "Message"],
-                      ...result.errorRows.map((e) => [e.row, e.sku, "error", e.error]),
-                      ...result.warnings.map((w) => [w.row, w.sku, "warning", w.warning]),
+                    downloadCsv("zvit-importu.csv", [
+                      ["Рядок", "Артикул", "Тип", "Повідомлення"],
+                      ...result.errorRows.map((e) => [e.row, e.sku, "помилка", e.error]),
+                      ...result.warnings.map((w) => [w.row, w.sku, "попередження", w.warning]),
                     ])
                   }
                 >
-                  <Download /> Download error report
+                  <Download /> Завантажити звіт про помилки
                 </Button>
                 <ul className="mt-3 max-h-72 space-y-1 overflow-y-auto text-xs">
                   {result.errorRows.map((e, i) => (
                     <li key={`e${i}`} className="text-destructive">
-                      Row {e.row} ({e.sku}): {e.error}
+                      Рядок {e.row} ({e.sku}): {e.error}
                     </li>
                   ))}
                   {result.warnings.map((w, i) => (
                     <li key={`w${i}`} className="text-[#9a6200]">
-                      Row {w.row} ({w.sku}): {w.warning}
+                      Рядок {w.row} ({w.sku}): {w.warning}
                     </li>
                   ))}
                 </ul>

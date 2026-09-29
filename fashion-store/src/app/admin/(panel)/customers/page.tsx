@@ -6,7 +6,7 @@ import { AdminFilters, Pagination } from "@/components/admin/filters";
 import { Card, EmptyState, Table, TD, TH, THead, TR } from "@/components/ui/misc";
 import { formatDate, formatMoney } from "@/lib/utils";
 
-export const metadata = { title: "Customers" };
+export const metadata = { title: "Клієнти" };
 const PER_PAGE = 30;
 
 export default async function CustomersPage(props: PageProps<"/admin/customers">) {
@@ -25,22 +25,22 @@ export default async function CustomersPage(props: PageProps<"/admin/customers">
   ]);
   return (
     <>
-      <PageHeader title="Customers" description={`${total} customers · ${subscribers} newsletter subscribers`} />
-      <AdminFilters search={{ placeholder: "Name, email, phone…" }} selects={[{ name: "sort", label: "Newest first", options: [{ value: "spent", label: "Top spenders" }, { value: "orders", label: "Most orders" }] }]} />
+      <PageHeader title="Клієнти" description={`Клієнтів: ${total} · підписників розсилки: ${subscribers}`} />
+      <AdminFilters search={{ placeholder: "Імʼя, email, телефон…" }} selects={[{ name: "sort", label: "Спершу нові", options: [{ value: "spent", label: "Найбільше витратили" }, { value: "orders", label: "Найбільше замовлень" }] }]} />
       <Card>
         {customers.length === 0 ? (
-          <EmptyState title="No customers yet" description="Customers are created automatically at checkout." />
+          <EmptyState title="Клієнтів ще немає" description="Клієнти створюються автоматично під час оформлення замовлення." />
         ) : (
           <>
             <Table>
               <THead>
                 <tr>
-                  <TH>Customer</TH>
-                  <TH>Phone</TH>
-                  <TH>City</TH>
-                  <TH className="text-right">Orders</TH>
-                  <TH className="text-right">Total spent</TH>
-                  <TH>Since</TH>
+                  <TH>Клієнт</TH>
+                  <TH>Телефон</TH>
+                  <TH>Місто</TH>
+                  <TH className="text-right">Замовлень</TH>
+                  <TH className="text-right">Витрачено</TH>
+                  <TH>З нами з</TH>
                 </tr>
               </THead>
               <tbody>

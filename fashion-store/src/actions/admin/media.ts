@@ -75,7 +75,7 @@ export async function deleteMedia(ids: string[]): Promise<ActionResult<{ inUse: 
       await prisma.media.delete({ where: { id: m.id } });
       if (!m.url.startsWith("/demo/")) await deleteStoredFile(m.url);
     }
-    return { ok: true, data: { inUse }, message: inUse ? `${inUse} file(s) are in use and were kept` : undefined };
+    return { ok: true, data: { inUse }, message: inUse ? `Файли, що використовуються на сайті, збережено: ${inUse}` : undefined };
   } catch (e) {
     return actionError(e);
   }

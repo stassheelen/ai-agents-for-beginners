@@ -107,7 +107,7 @@ export function CartDrawer({ freeShippingThreshold, shippingFlatRate }: { freeSh
                 <span>{formatMoney(cart.subtotal + shipping)}</span>
               </div>
               <Button asChild size="lg" className="mt-3 w-full" onClick={() => setCartOpen(false)}>
-                <Link href="/checkout">Checkout</Link>
+                <Link href="/checkout">Оформити замовлення</Link>
               </Button>
               <p className="pt-1 text-center text-[11px] text-muted-foreground">Промокод можна застосувати на наступному кроці</p>
             </div>

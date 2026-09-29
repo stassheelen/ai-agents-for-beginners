@@ -54,7 +54,7 @@ export type ProductFormData = {
 type CategoryOpt = { id: string; name: string; parentId: string | null };
 type ColorOpt = { name: string; hex: string };
 
-const STEPS = ["Basic information", "Category", "Pricing", "Variants", "Images", "SEO", "Publishing"] as const;
+const STEPS = ["Основна інформація", "Категорія", "Ціни", "Варіанти", "Фото", "SEO", "Публікація"] as const;
 const DEFAULT_SIZES = ["XS", "S", "M", "L", "XL"];
 
 type VariantRow = { key: string; id?: string; sku: string; color: string; colorHex: string; size: string; stock: string; price: string };
@@ -142,12 +142,12 @@ export function ProductForm({
   const save = async (mode: "draft" | "publish" | "save") => {
     const status = mode === "draft" ? "DRAFT" : mode === "publish" ? "PUBLISHED" : f.status;
     const price = toMinor(f.price);
-    if (!f.name.trim()) return failAt(0, "Product name is required");
-    if (!f.sku.trim()) return failAt(0, "SKU is required");
-    if (price === null) return failAt(2, "Selling price is required");
-    if (status === "PUBLISHED" && variants.length === 0) return failAt(3, "Add at least one variant before publishing");
+    if (!f.name.trim()) return failAt(0, "Вкажіть назву товару");
+    if (!f.sku.trim()) return failAt(0, "Вкажіть артикул");
+    if (price === null) return failAt(2, "Вкажіть ціну продажу");
+    if (status === "PUBLISHED" && variants.length === 0) return failAt(3, "Додайте хоча б один варіант перед публікацією");
     for (const v of variants) {
-      if (!v.sku.trim()) return failAt(3, "Every variant needs a SKU");
+      if (!v.sku.trim()) return failAt(3, "Кожному варіанту потрібен артикул");
     }
     const payload: ProductInput = {
       id: initial?.id,
@@ -197,7 +197,7 @@ export function ProductForm({
         return;
       }
       setDirty(false);
-      toast.success(status === "PUBLISHED" ? "Saved & published" : "Saved");
+      toast.success(status === "PUBLISHED" ? "Збережено й опубліковано" : "Збережено");
       set("status", status);
       setDirty(false);
       if (!initial?.id && res.data) router.replace(`/admin/products/${res.data.id}`);
@@ -216,11 +216,11 @@ export function ProductForm({
     <div className="pb-24">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/admin/products" className="p-1.5 hover:bg-muted" aria-label="Back">
+          <Link href="/admin/products" className="p-1.5 hover:bg-muted" aria-label="Назад">
             <ArrowLeft className="size-4" />
           </Link>
           <div>
-            <h1 className="font-display text-2xl font-medium">{initial ? f.name || "Edit product" : "Add product"}</h1>
+            <h1 className="font-display text-2xl font-medium">{initial ? f.name || "Редагування товару" : "Новий товар"}</h1>
             {initial && (
               <p className="mt-0.5 flex items-center gap-2 text-muted-foreground">
                 <ProductStatusBadge status={f.status} /> {f.sku}
@@ -231,7 +231,7 @@ export function ProductForm({
         {initial && f.status === "PUBLISHED" && (
           <Button asChild variant="ghost" size="sm">
             <a href={`/products/${f.slug}`} target="_blank" rel="noreferrer">
-              <ExternalLink /> View in store
+              <ExternalLink /> Переглянути в магазині
             </a>
           </Button>
         )}
@@ -256,45 +256,45 @@ export function ProductForm({
           {step === 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Step 1 · Basic information</CardTitle>
+                <CardTitle>Крок 1 · Основна інформація</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-[1fr_220px]">
-                  <Field label="Product name *">
-                    <Input value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Sculpt High-Rise Leggings" />
+                  <Field label="Назва товару *">
+                    <Input value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Легінси з високою посадкою" />
                   </Field>
-                  <Field label="SKU *" hint="Unique product code. Used by CSV import to match products.">
+                  <Field label="Артикул (SKU) *" hint="Унікальний код товару. За ним CSV-імпорт знаходить товари.">
                     <Input value={f.sku} onChange={(e) => set("sku", e.target.value.toUpperCase())} placeholder="VL-LG-001" className="font-mono" />
                   </Field>
                 </div>
-                <Field label="Short description" hint="Shown under the price on the product page.">
+                <Field label="Короткий опис" hint="Показується під ціною на сторінці товару.">
                   <Textarea value={f.shortDescription} onChange={(e) => set("shortDescription", e.target.value)} className="min-h-16" maxLength={500} />
                 </Field>
-                <Field label="Description">
+                <Field label="Опис">
                   <Textarea value={f.description} onChange={(e) => set("description", e.target.value)} className="min-h-36" />
                 </Field>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Brand">
+                  <Field label="Бренд">
                     <Input value={f.brand} onChange={(e) => set("brand", e.target.value)} />
                   </Field>
-                  <Field label="Tags" hint="Comma separated — used by search.">
-                    <Input value={f.tags} onChange={(e) => set("tags", e.target.value)} placeholder="leggings, high-rise" />
+                  <Field label="Теги" hint="Через кому — використовуються в пошуку.">
+                    <Input value={f.tags} onChange={(e) => set("tags", e.target.value)} placeholder="легінси, висока посадка" />
                   </Field>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Details">
+                  <Field label="Деталі">
                     <Textarea value={f.details} onChange={(e) => set("details", e.target.value)} />
                   </Field>
-                  <Field label="Material">
+                  <Field label="Склад">
                     <Textarea value={f.material} onChange={(e) => set("material", e.target.value)} />
                   </Field>
-                  <Field label="Care instructions">
+                  <Field label="Догляд">
                     <Textarea value={f.careInstructions} onChange={(e) => set("careInstructions", e.target.value)} />
                   </Field>
-                  <Field label="Shipping info">
+                  <Field label="Доставка">
                     <Textarea value={f.shippingInfo} onChange={(e) => set("shippingInfo", e.target.value)} />
                   </Field>
-                  <Field label="Return info">
+                  <Field label="Повернення">
                     <Textarea value={f.returnInfo} onChange={(e) => set("returnInfo", e.target.value)} />
                   </Field>
                 </div>
@@ -305,11 +305,11 @@ export function ProductForm({
           {step === 1 && (
             <Card>
               <CardHeader>
-                <CardTitle>Step 2 · Category</CardTitle>
+                <CardTitle>Крок 2 · Категорія</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Category">
+                  <Field label="Категорія">
                     <NativeSelect
                       value={f.categoryId}
                       onChange={(e) => {
@@ -317,7 +317,7 @@ export function ProductForm({
                         set("subcategoryId", "");
                       }}
                     >
-                      <option value="">— none —</option>
+                      <option value="">— не вибрано —</option>
                       {parents.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
@@ -325,9 +325,9 @@ export function ProductForm({
                       ))}
                     </NativeSelect>
                   </Field>
-                  <Field label="Subcategory">
+                  <Field label="Підкатегорія">
                     <NativeSelect value={f.subcategoryId} onChange={(e) => set("subcategoryId", e.target.value)} disabled={!children.length}>
-                      <option value="">— none —</option>
+                      <option value="">— не вибрано —</option>
                       {children.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
@@ -336,7 +336,7 @@ export function ProductForm({
                     </NativeSelect>
                   </Field>
                 </div>
-                <Field label="Collections">
+                <Field label="Колекції">
                   <div className="flex flex-wrap gap-2">
                     {collections.map((c) => {
                       const on = f.collectionIds.includes(c.id);
@@ -353,7 +353,7 @@ export function ProductForm({
                     })}
                     {collections.length === 0 && (
                       <p className="text-xs text-muted-foreground">
-                        No collections yet — <Link href="/admin/collections" className="underline">create one</Link>.
+                        Колекцій ще немає — <Link href="/admin/collections" className="underline">створіть першу</Link>.
                       </p>
                     )}
                   </div>
@@ -365,20 +365,20 @@ export function ProductForm({
           {step === 2 && (
             <Card>
               <CardHeader>
-                <CardTitle>Step 3 · Pricing</CardTitle>
+                <CardTitle>Крок 3 · Ціни</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-4">
-                  <Field label="Cost price">
+                  <Field label="Собівартість">
                     <Input inputMode="decimal" value={f.costPrice} onChange={(e) => set("costPrice", e.target.value)} placeholder="0" />
                   </Field>
-                  <Field label="Selling price *">
+                  <Field label="Ціна продажу *">
                     <Input inputMode="decimal" value={f.price} onChange={(e) => set("price", e.target.value)} placeholder="0" />
                   </Field>
-                  <Field label="Compare-at price" hint="Old price — shown crossed out.">
+                  <Field label="Стара ціна" hint="Показується перекресленою.">
                     <Input inputMode="decimal" value={f.compareAtPrice} onChange={(e) => set("compareAtPrice", e.target.value)} placeholder="—" />
                   </Field>
-                  <Field label="Currency">
+                  <Field label="Валюта">
                     <NativeSelect value={f.currency} onChange={(e) => set("currency", e.target.value)}>
                       {["UAH", "EUR", "USD", "PLN"].map((c) => (
                         <option key={c}>{c}</option>
@@ -400,16 +400,16 @@ export function ProductForm({
           {step === 5 && (
             <Card>
               <CardHeader>
-                <CardTitle>Step 6 · SEO</CardTitle>
+                <CardTitle>Крок 6 · SEO</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Field label="SEO title" hint={`${f.seoTitle.length}/60 recommended`}>
+                <Field label="SEO-заголовок" hint={`${f.seoTitle.length}/60 рекомендовано`}>
                   <Input value={f.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} placeholder={f.name} />
                 </Field>
-                <Field label="SEO description" hint={`${f.seoDescription.length}/160 recommended`}>
+                <Field label="SEO-опис" hint={`${f.seoDescription.length}/160 рекомендовано`}>
                   <Textarea value={f.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} placeholder={f.shortDescription} className="min-h-20" />
                 </Field>
-                <Field label="URL slug" hint={`/products/${f.slug || "…"}`}>
+                <Field label="Адреса сторінки (slug)" hint={`/products/${f.slug || "…"}`}>
                   <Input
                     value={f.slug}
                     onChange={(e) => {
@@ -418,14 +418,14 @@ export function ProductForm({
                     }}
                   />
                 </Field>
-                <Field label="OG image URL" hint="Defaults to the main product image.">
+                <Field label="OG-зображення (URL)" hint="За замовчуванням — головне фото товару.">
                   <Input value={f.ogImage} onChange={(e) => set("ogImage", e.target.value)} placeholder={images[0]?.url ?? ""} />
                 </Field>
                 <div className="border border-border bg-soft p-4">
-                  <p className="text-[11px] text-muted-foreground">Search preview</p>
-                  <p className="mt-1 text-[15px] text-[#1a0dab]">{f.seoTitle || f.name || "Product title"}</p>
+                  <p className="text-[11px] text-muted-foreground">Попередній перегляд у пошуку</p>
+                  <p className="mt-1 text-[15px] text-[#1a0dab]">{f.seoTitle || f.name || "Назва товару"}</p>
                   <p className="text-xs text-[#006621]">/products/{f.slug}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{f.seoDescription || f.shortDescription || "Description…"}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{f.seoDescription || f.shortDescription || "Опис…"}</p>
                 </div>
               </CardContent>
             </Card>
@@ -434,10 +434,10 @@ export function ProductForm({
           {step === 6 && (
             <Card>
               <CardHeader>
-                <CardTitle>Step 7 · Publishing</CardTitle>
+                <CardTitle>Крок 7 · Публікація</CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
-                <Field label="Status">
+                <Field label="Статус">
                   <div className="flex gap-2">
                     {(["DRAFT", "PUBLISHED", "ARCHIVED"] as const).map((s) => (
                       <button
@@ -446,7 +446,7 @@ export function ProductForm({
                         onClick={() => set("status", s)}
                         className={cn("border px-4 py-2 text-xs", f.status === s ? "border-foreground bg-foreground text-white" : "border-border bg-white hover:border-foreground")}
                       >
-                        {s === "DRAFT" ? "Draft" : s === "PUBLISHED" ? "Published" : "Archived"}
+                        {s === "DRAFT" ? "Чернетка" : s === "PUBLISHED" ? "Опубліковано" : "Архів"}
                       </button>
                     ))}
                   </div>
@@ -454,10 +454,10 @@ export function ProductForm({
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(
                     [
-                      ["featured", "Featured", "Shown first in “Featured” sorting and Trending"],
-                      ["isNew", "New", "NEW badge and New arrivals"],
-                      ["bestSeller", "Best seller", "BESTSELLER badge and Best sellers"],
-                      ["onSale", "Sale", "SALE badge and Sale page (auto when compare-at price is set)"],
+                      ["featured", "Рекомендований", "Показується першим у сортуванні «Рекомендовані» та в «У тренді»"],
+                      ["isNew", "Новинка", "Бейдж «Новинка» та розділ «Новинки»"],
+                      ["bestSeller", "Бестселер", "Бейдж «Бестселер» та розділ «Бестселери»"],
+                      ["onSale", "Знижка", "Бейдж «Знижка» та розділ «Розпродаж» (автоматично, якщо вказана стара ціна)"],
                     ] as const
                   ).map(([key, label, hint]) => (
                     <label key={key} className="flex cursor-pointer items-start justify-between gap-4 border border-border p-4">
@@ -475,11 +475,11 @@ export function ProductForm({
 
           <div className="mt-4 flex justify-between">
             <Button type="button" variant="ghost" size="sm" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
-              Back
+              Назад
             </Button>
             {step < STEPS.length - 1 && (
               <Button type="button" variant="outline" size="sm" onClick={() => setStep((s) => s + 1)}>
-                Next: {STEPS[step + 1]}
+                Далі: {STEPS[step + 1]}
               </Button>
             )}
           </div>
@@ -488,12 +488,12 @@ export function ProductForm({
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white/95 backdrop-blur lg:left-60">
         <div className="mx-auto flex max-w-[1400px] items-center justify-end gap-2 px-4 py-3 md:px-6 lg:px-8">
-          {dirty && <span className="mr-auto text-xs text-muted-foreground">Unsaved changes</span>}
+          {dirty && <span className="mr-auto text-xs text-muted-foreground">Є незбережені зміни</span>}
           <Button type="button" variant="outline" onClick={() => save("draft")} disabled={Boolean(saving)}>
-            {saving === "draft" && <Loader2 className="animate-spin" />} Save draft
+            {saving === "draft" && <Loader2 className="animate-spin" />} Зберегти чернетку
           </Button>
           <Button type="button" onClick={() => save("publish")} disabled={Boolean(saving)}>
-            {saving === "publish" && <Loader2 className="animate-spin" />} Save & publish
+            {saving === "publish" && <Loader2 className="animate-spin" />} Зберегти й опублікувати
           </Button>
         </div>
       </div>
@@ -517,15 +517,15 @@ function PricingSummary({ price, cost, compare }: { price: number | null; cost: 
   return (
     <div className="grid grid-cols-3 gap-3 border border-border bg-soft p-4 text-xs">
       <div>
-        <p className="text-muted-foreground">Margin</p>
+        <p className="text-muted-foreground">Маржа</p>
         <p className="mt-1 text-sm font-medium">{margin !== null ? `${(margin / 100).toFixed(2)} (${Math.round((margin / price) * 100)}%)` : "—"}</p>
       </div>
       <div>
-        <p className="text-muted-foreground">Markup</p>
+        <p className="text-muted-foreground">Націнка</p>
         <p className="mt-1 text-sm font-medium">{cost ? `${Math.round(((price - cost) / cost) * 100)}%` : "—"}</p>
       </div>
       <div>
-        <p className="text-muted-foreground">Discount</p>
+        <p className="text-muted-foreground">Знижка</p>
         <p className="mt-1 text-sm font-medium">{compare && compare > price ? `−${Math.round(((compare - price) / compare) * 100)}%` : "—"}</p>
       </div>
     </div>
@@ -559,21 +559,21 @@ function VariantsEditor({ variants, setVariants, productSku, colors }: { variant
           price: "",
         });
       }
-    if (!added.length) return toast.message("All combinations already exist");
+    if (!added.length) return toast.message("Усі комбінації вже існують");
     setVariants([...variants, ...added]);
-    toast.success(`${added.length} variant(s) added`);
+    toast.success(`Додано варіантів: ${added.length}`);
   };
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Step 4 · Variants</CardTitle>
-          <span className="text-xs text-muted-foreground">{variants.length} variants · {variants.reduce((a, v) => a + (Number(v.stock) || 0), 0)} pcs</span>
+          <CardTitle>Крок 4 · Варіанти</CardTitle>
+          <span className="text-xs text-muted-foreground">{variants.length} варіантів · {variants.reduce((a, v) => a + (Number(v.stock) || 0), 0)} шт.</span>
         </CardHeader>
         <CardContent className="space-y-5">
           <div>
-            <Label>Colors</Label>
+            <Label>Кольори</Label>
             <div className="mt-2 flex flex-wrap gap-2">
               {colors.map((c) => {
                 const on = genColors.some((g) => g.name === c.name);
@@ -593,15 +593,15 @@ function VariantsEditor({ variants, setVariants, productSku, colors }: { variant
                 .map((g) => (
                   <span key={g.name} className="inline-flex items-center gap-2 border border-foreground bg-foreground px-3 py-1.5 text-xs text-white">
                     <span className="size-3 rounded-full" style={{ background: g.hex }} /> {g.name}
-                    <button type="button" onClick={() => setGenColors(genColors.filter((x) => x.name !== g.name))} aria-label="Remove">
+                    <button type="button" onClick={() => setGenColors(genColors.filter((x) => x.name !== g.name))} aria-label="Прибрати">
                       <X className="size-3" />
                     </button>
                   </span>
                 ))}
             </div>
             <div className="mt-2 flex items-center gap-2">
-              <Input value={newColor.name} onChange={(e) => setNewColor({ ...newColor, name: e.target.value })} placeholder="New color name" className="h-8 w-44" />
-              <input type="color" value={newColor.hex} onChange={(e) => setNewColor({ ...newColor, hex: e.target.value })} className="h-8 w-10 cursor-pointer border border-input" aria-label="Color" />
+              <Input value={newColor.name} onChange={(e) => setNewColor({ ...newColor, name: e.target.value })} placeholder="Назва нового кольору" className="h-8 w-44" />
+              <input type="color" value={newColor.hex} onChange={(e) => setNewColor({ ...newColor, hex: e.target.value })} className="h-8 w-10 cursor-pointer border border-input" aria-label="Колір" />
               <Button
                 type="button"
                 size="sm"
@@ -613,12 +613,12 @@ function VariantsEditor({ variants, setVariants, productSku, colors }: { variant
                   setNewColor({ name: "", hex: "#888888" });
                 }}
               >
-                <Plus /> Add
+                <Plus /> Додати
               </Button>
             </div>
           </div>
           <div>
-            <Label>Sizes</Label>
+            <Label>Розміри</Label>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {[...new Set([...DEFAULT_SIZES, "XXL", "ONE SIZE", ...genSizes])].map((s) => {
                 const on = genSizes.includes(s);
@@ -628,24 +628,24 @@ function VariantsEditor({ variants, setVariants, productSku, colors }: { variant
                   </button>
                 );
               })}
-              <Input value={customSize} onChange={(e) => setCustomSize(e.target.value.toUpperCase())} placeholder="Custom" className="h-8 w-24" />
+              <Input value={customSize} onChange={(e) => setCustomSize(e.target.value.toUpperCase())} placeholder="Свій" className="h-8 w-24" />
               <Button type="button" size="sm" variant="outline" className="h-8" onClick={() => customSize && (setGenSizes([...genSizes, customSize]), setCustomSize(""))}>
                 <Plus />
               </Button>
             </div>
           </div>
           <Button type="button" onClick={generate} size="sm">
-            <Wand2 /> Generate {Math.max(genColors.length, 1) * Math.max(genSizes.length, 1)} combinations
+            <Wand2 /> Створити комбінацій: {Math.max(genColors.length, 1) * Math.max(genSizes.length, 1)}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-          <span className="text-xs text-muted-foreground">Set stock for all:</span>
+          <span className="text-xs text-muted-foreground">Залишок для всіх:</span>
           <Input value={bulkStock} onChange={(e) => setBulkStock(e.target.value.replace(/\D/g, ""))} className="h-8 w-20" />
           <Button type="button" size="sm" variant="outline" className="h-8" onClick={() => bulkStock && setVariants(variants.map((v) => ({ ...v, stock: bulkStock })))}>
-            Apply
+            Застосувати
           </Button>
           <Button
             type="button"
@@ -654,18 +654,18 @@ function VariantsEditor({ variants, setVariants, productSku, colors }: { variant
             className="ml-auto h-8"
             onClick={() => setVariants([...variants, { key: k(), sku: `${productSku}-${variants.length + 1}`, color: "", colorHex: "#888888", size: "", stock: "0", price: "" }])}
           >
-            <Plus /> Add row
+            <Plus /> Додати рядок
           </Button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead className="border-b border-border bg-soft text-left text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
               <tr>
-                <th className="px-3 py-2 font-medium">Color</th>
-                <th className="px-3 py-2 font-medium">Size</th>
-                <th className="px-3 py-2 font-medium">SKU</th>
-                <th className="px-3 py-2 font-medium">Stock</th>
-                <th className="px-3 py-2 font-medium">Price override</th>
+                <th className="px-3 py-2 font-medium">Колір</th>
+                <th className="px-3 py-2 font-medium">Розмір</th>
+                <th className="px-3 py-2 font-medium">Артикул</th>
+                <th className="px-3 py-2 font-medium">Залишок</th>
+                <th className="px-3 py-2 font-medium">Своя ціна</th>
                 <th className="w-10" />
               </tr>
             </thead>
@@ -674,7 +674,7 @@ function VariantsEditor({ variants, setVariants, productSku, colors }: { variant
                 <tr key={v.key} className="border-b border-border last:border-0">
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <input type="color" value={v.colorHex} onChange={(e) => update(v.key, { colorHex: e.target.value })} className="h-8 w-8 shrink-0 cursor-pointer border border-input" aria-label="Color hex" />
+                      <input type="color" value={v.colorHex} onChange={(e) => update(v.key, { colorHex: e.target.value })} className="h-8 w-8 shrink-0 cursor-pointer border border-input" aria-label="Код кольору" />
                       <Input value={v.color} onChange={(e) => update(v.key, { color: e.target.value })} className="h-8" placeholder="—" list="color-names" />
                     </div>
                   </td>
@@ -688,10 +688,10 @@ function VariantsEditor({ variants, setVariants, productSku, colors }: { variant
                     <Input value={v.stock} onChange={(e) => update(v.key, { stock: e.target.value.replace(/\D/g, "") })} inputMode="numeric" className={cn("h-8 w-24", v.stock === "0" && "text-destructive")} />
                   </td>
                   <td className="px-3 py-2">
-                    <Input value={v.price} onChange={(e) => update(v.key, { price: e.target.value })} inputMode="decimal" placeholder="base" className="h-8 w-28" />
+                    <Input value={v.price} onChange={(e) => update(v.key, { price: e.target.value })} inputMode="decimal" placeholder="базова" className="h-8 w-28" />
                   </td>
                   <td className="px-2">
-                    <button type="button" onClick={() => setVariants(variants.filter((x) => x.key !== v.key))} className="p-1.5 text-muted-foreground hover:text-destructive" aria-label="Remove variant">
+                    <button type="button" onClick={() => setVariants(variants.filter((x) => x.key !== v.key))} className="p-1.5 text-muted-foreground hover:text-destructive" aria-label="Видалити варіант">
                       <Trash2 className="size-4" />
                     </button>
                   </td>
@@ -700,7 +700,7 @@ function VariantsEditor({ variants, setVariants, productSku, colors }: { variant
               {variants.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-3 py-10 text-center text-muted-foreground">
-                    No variants yet. Select colors & sizes above and click Generate.
+                    Варіантів ще немає. Оберіть кольори й розміри вище та натисніть «Створити».
                   </td>
                 </tr>
               )}
@@ -723,24 +723,24 @@ function SortableImage({ img, index, colors, onChange, onRemove, onMain }: { img
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn("border bg-white", index === 0 ? "border-foreground" : "border-border", isDragging && "z-10 opacity-80 shadow-lg")}>
       <div className="relative aspect-[4/5] bg-muted">
         <Image src={img.url} alt={img.alt} fill sizes="200px" className="object-cover" />
-        <button type="button" {...attributes} {...listeners} className="absolute left-1.5 top-1.5 cursor-grab bg-white p-1 active:cursor-grabbing" aria-label="Drag to reorder">
+        <button type="button" {...attributes} {...listeners} className="absolute left-1.5 top-1.5 cursor-grab bg-white p-1 active:cursor-grabbing" aria-label="Перетягніть, щоб змінити порядок">
           <GripVertical className="size-4" />
         </button>
         {index === 0 ? (
-          <span className="absolute right-1.5 top-1.5 bg-foreground px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-white">Main</span>
+          <span className="absolute right-1.5 top-1.5 bg-foreground px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-white">Головне</span>
         ) : (
-          <button type="button" onClick={onMain} className="absolute right-1.5 top-1.5 bg-white p-1" title="Set as main image" aria-label="Set as main">
+          <button type="button" onClick={onMain} className="absolute right-1.5 top-1.5 bg-white p-1" title="Зробити головним" aria-label="Зробити головним">
             <Star className="size-4" />
           </button>
         )}
-        <button type="button" onClick={onRemove} className="absolute bottom-1.5 right-1.5 bg-white p-1 hover:text-destructive" aria-label="Remove image">
+        <button type="button" onClick={onRemove} className="absolute bottom-1.5 right-1.5 bg-white p-1 hover:text-destructive" aria-label="Видалити фото">
           <Trash2 className="size-4" />
         </button>
       </div>
       <div className="space-y-1.5 p-2">
-        <Input value={img.alt} onChange={(e) => onChange({ alt: e.target.value })} placeholder="Alt text" className="h-8 text-xs" />
+        <Input value={img.alt} onChange={(e) => onChange({ alt: e.target.value })} placeholder="Альтернативний текст" className="h-8 text-xs" />
         <NativeSelect value={img.colorName} onChange={(e) => onChange({ colorName: e.target.value })} className="h-8 text-xs">
-          <option value="">All colors</option>
+          <option value="">Усі кольори</option>
           {colors.map((c) => (
             <option key={c}>{c}</option>
           ))}
@@ -765,9 +765,9 @@ function ImagesEditor({ images, setImages, colors, productName }: { images: Imag
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Step 5 · Images</CardTitle>
+        <CardTitle>Крок 5 · Фото</CardTitle>
         <Button type="button" size="sm" variant="outline" onClick={() => setPicker(true)}>
-          <ImagePlus /> From library
+          <ImagePlus /> З бібліотеки
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -780,7 +780,7 @@ function ImagesEditor({ images, setImages, colors, productName }: { images: Imag
           }}
         />
         <p className="text-[11px] text-muted-foreground">
-          The first image is the main image. Drag to reorder. Assign a color to show an image only when that color is selected; the second image is shown on hover in product cards.
+          Перше фото — головне. Перетягуйте, щоб змінити порядок. Призначте колір, щоб фото показувалося лише для цього кольору; друге фото показується при наведенні в картці товару.
         </p>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={images.map((i) => i.key)} strategy={rectSortingStrategy}>

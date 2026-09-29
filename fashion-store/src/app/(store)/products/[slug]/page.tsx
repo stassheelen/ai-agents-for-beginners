@@ -28,7 +28,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
   const product = await getProductBySlug(slug);
   if (!product) notFound();
   const [settings, related] = await Promise.all([getSettings(), getRelatedProducts(product.id, product.categoryId)]);
-  const crumbs = [{ name: "Головна", href: "/" }, { name: "Shop", href: "/shop" }];
+  const crumbs = [{ name: "Головна", href: "/" }, { name: "Каталог", href: "/shop" }];
   if (product.category) crumbs.push({ name: product.category.name, href: `/shop/${product.category.slug}` });
   if (product.subcategory) crumbs.push({ name: product.subcategory.name, href: `/shop/${product.subcategory.slug}` });
   crumbs.push({ name: product.name, href: `/products/${product.slug}` });

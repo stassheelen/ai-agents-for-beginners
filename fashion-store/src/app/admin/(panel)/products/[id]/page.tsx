@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { ProductForm, type ProductFormData } from "@/components/admin/product-form";
 import { productFormOptions } from "@/lib/admin-data";
 
-export const metadata = { title: "Edit product" };
+export const metadata = { title: "Редагування товару" };
 
 export default async function EditProductPage(props: PageProps<"/admin/products/[id]">) {
   const { id } = await props.params;

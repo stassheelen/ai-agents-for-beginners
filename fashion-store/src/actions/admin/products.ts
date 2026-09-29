@@ -15,11 +15,11 @@ const imageUrl = z
   .trim()
   .min(1)
   .max(1000)
-  .refine((v) => v.startsWith("/") || /^https:\/\//.test(v), "Image URL must be https:// or a site path");
+  .refine((v) => v.startsWith("/") || /^https:\/\//.test(v), "Посилання на фото має починатися з https:// або / (шлях на сайті)");
 
 const variantSchema = z.object({
   id: z.string().optional(),
-  sku: z.string().trim().min(1, "Variant SKU required").max(64),
+  sku: z.string().trim().min(1, "Вкажіть артикул варіанту").max(64),
   color: z.string().trim().max(40).optional().nullable(),
   colorHex: z.string().trim().regex(/^#[0-9a-f]{6}$/i).optional().nullable(),
   size: z.string().trim().max(20).optional().nullable(),
@@ -29,8 +29,8 @@ const variantSchema = z.object({
 
 const productSchema = z.object({
   id: z.string().optional(),
-  name: z.string().trim().min(2, "Product name is required").max(160),
-  sku: z.string().trim().min(1, "SKU is required").max(64),
+  name: z.string().trim().min(2, "Вкажіть назву товару").max(160),
+  sku: z.string().trim().min(1, "Вкажіть артикул").max(64),
   slug: z.string().trim().max(120).optional(),
   description: optText(10000),
   shortDescription: optText(500),
@@ -92,20 +92,20 @@ export async function saveProduct(input: ProductInput): Promise<ActionResult<{ i
     // Business validation
     const skus = data.variants.map((v) => v.sku.toUpperCase());
     const dupe = skus.find((s, i) => skus.indexOf(s) !== i);
-    if (dupe) return { ok: false, error: `Duplicate variant SKU: ${dupe}` };
+    if (dupe) return { ok: false, error: `Артикул варіанту повторюється: ${dupe}` };
     const combos = data.variants.map((v) => `${(v.color ?? "").toLowerCase()}|${(v.size ?? "").toLowerCase()}`);
     const dupeCombo = combos.find((c, i) => combos.indexOf(c) !== i);
-    if (dupeCombo) return { ok: false, error: `Duplicate variant (color/size): ${dupeCombo.replace("|", " / ")}` };
-    if (data.status === "PUBLISHED" && data.variants.length === 0) return { ok: false, error: "Add at least one variant (size/color with stock) before publishing" };
+    if (dupeCombo) return { ok: false, error: `Варіант повторюється (колір/розмір): ${dupeCombo.replace("|", " / ")}` };
+    if (data.status === "PUBLISHED" && data.variants.length === 0) return { ok: false, error: "Перед публікацією додайте хоча б один варіант (колір/розмір із залишком)" };
     if (data.compareAtPrice && data.compareAtPrice <= data.price) data.compareAtPrice = null;
 
     const conflictSku = await prisma.productVariant.findFirst({
       where: { sku: { in: data.variants.map((v) => v.sku), mode: "insensitive" }, ...(data.id ? { productId: { not: data.id } } : {}) },
       select: { sku: true },
     });
-    if (conflictSku) return { ok: false, error: `Variant SKU already used by another product: ${conflictSku.sku}` };
+    if (conflictSku) return { ok: false, error: `Артикул варіанту вже використовує інший товар: ${conflictSku.sku}` };
     const conflictProductSku = await prisma.product.findFirst({ where: { sku: { equals: data.sku, mode: "insensitive" }, ...(data.id ? { id: { not: data.id } } : {}) }, select: { id: true } });
-    if (conflictProductSku) return { ok: false, error: `SKU ${data.sku} already exists` };
+    if (conflictProductSku) return { ok: false, error: `Артикул ${data.sku} уже існує` };
 
     const slug = await uniqueSlug(data.slug || data.name, data.id);
     const existing = data.id ? await prisma.product.findUnique({ where: { id: data.id }, select: { status: true, publishedAt: true } }) : null;
@@ -174,7 +174,7 @@ export async function saveProduct(input: ProductInput): Promise<ActionResult<{ i
       { timeout: 30000 },
     );
     invalidateStore();
-    return { ok: true, data: { id: saved.id, slug: saved.slug }, message: "Product saved" };
+    return { ok: true, data: { id: saved.id, slug: saved.slug }, message: "Товар збережено" };
   } catch (e) {
     return actionError(e);
   }
@@ -185,12 +185,12 @@ export async function setProductsStatus(ids: string[], status: ProductStatus): P
     await requireAdmin();
     if (status === "PUBLISHED") {
       const withoutVariants = await prisma.product.count({ where: { id: { in: ids }, variants: { none: {} } } });
-      if (withoutVariants) return { ok: false, error: `${withoutVariants} product(s) have no variants and cannot be published` };
+      if (withoutVariants) return { ok: false, error: `Товарів без варіантів: ${withoutVariants} — їх не можна опублікувати` };
     }
     await prisma.product.updateMany({ where: { id: { in: ids } }, data: { status } });
     if (status === "PUBLISHED") await prisma.product.updateMany({ where: { id: { in: ids }, publishedAt: null }, data: { publishedAt: new Date() } });
     invalidateStore();
-    return { ok: true, message: `${ids.length} product(s) updated` };
+    return { ok: true, message: `Оновлено товарів: ${ids.length}` };
   } catch (e) {
     return actionError(e);
   }
@@ -201,7 +201,7 @@ export async function setProductsFlag(ids: string[], flag: "featured" | "isNew" 
     await requireAdmin();
     await prisma.product.updateMany({ where: { id: { in: ids } }, data: { [flag]: value } });
     invalidateStore();
-    return { ok: true, message: `${ids.length} product(s) updated` };
+    return { ok: true, message: `Оновлено товарів: ${ids.length}` };
   } catch (e) {
     return actionError(e);
   }
@@ -213,7 +213,7 @@ export async function deleteProducts(ids: string[]): Promise<ActionResult> {
     // Order history keeps name/SKU/price snapshots; OrderItem.productId is set to NULL.
     await prisma.product.deleteMany({ where: { id: { in: ids } } });
     invalidateStore();
-    return { ok: true, message: `${ids.length} product(s) deleted` };
+    return { ok: true, message: `Видалено товарів: ${ids.length}` };
   } catch (e) {
     return actionError(e);
   }
@@ -226,7 +226,7 @@ export async function duplicateProduct(id: string): Promise<ActionResult<{ id: s
       where: { id },
       include: { images: true, variants: true, categories: true, collections: true },
     });
-    if (!p) return { ok: false, error: "Product not found" };
+    if (!p) return { ok: false, error: "Товар не знайдено" };
     const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
     const { id: _id, createdAt: _c, updatedAt: _u, publishedAt: _p, images, variants, categories, collections, ...rest } = p;
     void _id;
@@ -236,7 +236,7 @@ export async function duplicateProduct(id: string): Promise<ActionResult<{ id: s
     const copy = await prisma.product.create({
       data: {
         ...rest,
-        name: `${p.name} (copy)`,
+        name: `${p.name} (копія)`,
         sku: `${p.sku}-COPY-${suffix}`,
         slug: await uniqueSlug(`${p.slug}-copy`),
         status: "DRAFT",
@@ -249,7 +249,7 @@ export async function duplicateProduct(id: string): Promise<ActionResult<{ id: s
         collections: { create: collections.map((c) => ({ collectionId: c.collectionId, position: c.position })) },
       },
     });
-    return { ok: true, data: { id: copy.id }, message: "Duplicated as draft (stock set to 0)" };
+    return { ok: true, data: { id: copy.id }, message: "Створено копію-чернетку (залишки обнулено)" };
   } catch (e) {
     return actionError(e);
   }
@@ -261,7 +261,7 @@ export async function updateVariantStock(updates: { id: string; stock: number }[
     const parsed = z.array(z.object({ id: z.string(), stock: z.coerce.number().int().min(0).max(1_000_000) })).max(500).parse(updates);
     await prisma.$transaction(parsed.map((u) => prisma.productVariant.update({ where: { id: u.id }, data: { stock: u.stock } })));
     invalidateStore();
-    return { ok: true, message: `${parsed.length} variant(s) updated` };
+    return { ok: true, message: `Оновлено варіантів: ${parsed.length}` };
   } catch (e) {
     return actionError(e);
   }

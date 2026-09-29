@@ -66,17 +66,17 @@ export function Pagination({ page, pages }: { page: number; pages: number }) {
   return (
     <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs">
       <span className="text-muted-foreground">
-        Page {page} of {pages}
+        Сторінка {page} з {pages}
       </span>
       <div className="flex gap-2">
         {page > 1 && (
           <Link href={href(page - 1)} className="border border-border bg-white px-3 py-1.5 hover:border-foreground">
-            Previous
+            Назад
           </Link>
         )}
         {page < pages && (
           <Link href={href(page + 1)} className="border border-border bg-white px-3 py-1.5 hover:border-foreground">
-            Next
+            Далі
           </Link>
         )}
       </div>

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/admin/shell";
 import { HomepageEditor, type SectionRow } from "@/components/admin/homepage-editor";
 
-export const metadata = { title: "Homepage" };
+export const metadata = { title: "Головна сторінка" };
 
 export default async function HomepageAdmin() {
   const [sections, categories, collections] = await Promise.all([
@@ -31,7 +31,7 @@ export default async function HomepageAdmin() {
   }));
   return (
     <>
-      <PageHeader title="Homepage" description="Every block on the storefront homepage is managed here. Changes are live immediately." />
+      <PageHeader title="Головна сторінка" description="Тут керуються всі блоки головної сторінки магазину. Зміни зʼявляються одразу." />
       <HomepageEditor sections={rows} categories={categories} collections={collections} />
     </>
   );

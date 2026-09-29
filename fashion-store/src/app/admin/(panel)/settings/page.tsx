@@ -6,13 +6,13 @@ import { blobEnabled } from "@/lib/storage";
 import { novaPoshta } from "@/lib/providers/delivery";
 import { getPaymentProvider } from "@/lib/providers/payment";
 
-export const metadata = { title: "Settings" };
+export const metadata = { title: "Налаштування" };
 
 export default async function SettingsPage() {
   const s = await prisma.settings.findUnique({ where: { id: "default" } }) ?? (await getSettings());
   return (
     <>
-      <PageHeader title="Settings" description="Store identity, shipping, SEO defaults and informational content." />
+      <PageHeader title="Налаштування" description="Дані магазину, доставка, SEO за замовчуванням та інформаційні тексти." />
       <SettingsForm
         initial={{
           storeName: s.storeName,
@@ -33,9 +33,9 @@ export default async function SettingsPage() {
           returnsInfo: s.returnsInfo ?? "",
         }}
         integrations={[
-          { name: "Vercel Blob storage", ok: blobEnabled(), hint: "BLOB_READ_WRITE_TOKEN" },
-          { name: "Nova Poshta API (city / branch autocomplete)", ok: novaPoshta.isConfigured(), hint: "NOVA_POSHTA_API_KEY" },
-          { name: `Online card payments (${getPaymentProvider("card").name})`, ok: getPaymentProvider("card").id !== "manual", hint: "LIQPAY_PUBLIC_KEY / LIQPAY_PRIVATE_KEY" },
+          { name: "Сховище файлів Vercel Blob", ok: blobEnabled(), hint: "BLOB_READ_WRITE_TOKEN" },
+          { name: "API Нової Пошти (підказки міст і відділень)", ok: novaPoshta.isConfigured(), hint: "NOVA_POSHTA_API_KEY" },
+          { name: `Онлайн-оплата карткою (${getPaymentProvider("card").name})`, ok: getPaymentProvider("card").id !== "manual", hint: "LIQPAY_PUBLIC_KEY / LIQPAY_PRIVATE_KEY" },
         ]}
       />
     </>

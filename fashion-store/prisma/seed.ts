@@ -24,6 +24,7 @@ function rand() {
   return seedState / 4294967296;
 }
 const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)];
+const colorUk = (key: string) => DEMO_COLORS.find((c) => c.key === key)!.name;
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const COLOR_CODE: Record<string, string> = { Black: "BLK", White: "WHT", Grey: "GRY", Brown: "BRN", Beige: "BGE", Blue: "BLU", Green: "GRN" };
 
@@ -39,7 +40,7 @@ async function ensureAdmin() {
   await prisma.adminUser.upsert({
     where: { email },
     update: { passwordHash, active: true },
-    create: { email, passwordHash, name: "Store Admin", role: "OWNER" },
+    create: { email, passwordHash, name: "Адміністратор", role: "OWNER" },
   });
   console.log(`✓ Admin user: ${email}`);
 }
@@ -51,7 +52,7 @@ async function ensureSettings() {
     create: {
       id: "default",
       storeName: "VELLA",
-      tagline: "Activewear & essentials",
+      tagline: "Одяг для руху та щоденного життя",
       accentColor: "#1f1f1f",
       currency: "UAH",
       freeShippingThreshold: 200000,
@@ -102,8 +103,8 @@ async function seedCatalog() {
   // Colours
   const colors = new Map<string, string>();
   for (const [i, c] of DEMO_COLORS.entries()) {
-    const row = await prisma.color.create({ data: { ...c, position: i } });
-    colors.set(c.name, row.id);
+    const row = await prisma.color.create({ data: { name: c.name, slug: c.slug, hex: c.hex, position: i } });
+    colors.set(c.key, row.id);
   }
 
   // Categories
@@ -152,13 +153,14 @@ async function seedCatalog() {
   for (const [index, p] of DEMO_PRODUCTS.entries()) {
     const sizes = p.sizes ?? APPAREL_SIZES;
     const createdAt = new Date(now - (DEMO_PRODUCTS.length - index) * 36 * 3600 * 1000 - (p.flags?.isNew ? 0 : 20 * 86400000));
-    const productSlug = slug(p.name);
+    const productSlug = slug(p.slugEn);
     const categoryId = categories.get(p.category)!;
     const subcategoryId = p.subcategory !== p.category ? categories.get(p.subcategory) : undefined;
     const images: { url: string; alt: string; colorName: string; position: number }[] = [];
     p.colors.forEach((color, ci) => {
-      images.push({ url: `/demo/${imageName(p.type, color, 0)}`, alt: `${p.name} — ${color}`, colorName: color, position: ci * 2 });
-      images.push({ url: `/demo/${imageName(p.type, color, 1)}`, alt: `${p.name} — ${color}, деталь`, colorName: color, position: ci * 2 + 1 });
+      const uk = colorUk(color);
+      images.push({ url: `/demo/${imageName(p.type, color, 0)}`, alt: `${p.name} — ${uk}`, colorName: uk, position: ci * 2 });
+      images.push({ url: `/demo/${imageName(p.type, color, 1)}`, alt: `${p.name} — ${uk}, деталь`, colorName: uk, position: ci * 2 + 1 });
     });
     // gallery order: first colour front, first colour detail, then other colours
     const variants = p.colors.flatMap((color, ci) =>
@@ -212,7 +214,7 @@ async function seedCatalog() {
       },
       include: { variants: { include: { color: true } } },
     });
-    productIds.push({ id: product.id, p, variants: product.variants.map((v) => ({ id: v.id, sku: v.sku, size: v.size, color: v.color!.name })) });
+    productIds.push({ id: product.id, p, variants: product.variants.map((v) => ({ id: v.id, sku: v.sku, size: v.size, color: DEMO_COLORS.find((c) => c.name === v.color!.name)!.key })) });
   }
   console.log(`✓ ${DEMO_PRODUCTS.length} products`);
 
@@ -283,7 +285,7 @@ async function seedCatalog() {
         variantId: variant.id,
         name: prod.p.name,
         sku: variant.sku,
-        color: variant.color,
+        color: colorUk(variant.color),
         size: variant.size,
         image: `/demo/${imageName(prod.p.type, variant.color, 0)}`,
         unitPrice: unit,
@@ -338,9 +340,9 @@ async function seedCatalog() {
       { placement: "ANNOUNCEMENT", title: "Безкоштовна доставка від 2000 ₴", link: "/help/delivery", position: 0 },
       { placement: "ANNOUNCEMENT", title: "−10% на перше замовлення з кодом WELCOME10", link: "/shop", position: 1 },
       { placement: "ANNOUNCEMENT", title: "Обмін та повернення протягом 14 днів", link: "/help/returns", position: 2 },
-      { placement: "MEGA_MENU", title: "Active Studio", subtitle: "Нова колекція для тренувань", image: "/demo/editorial-active.webp", link: "/collections/active-studio", buttonLabel: "Дивитись", position: 0 },
-      { placement: "MEGA_MENU", title: "Essentials", subtitle: "Щоденна база", image: "/demo/editorial-essentials.webp", link: "/collections/essentials", buttonLabel: "Дивитись", position: 1 },
-      { placement: "CATALOG", title: "Sale до −30%", subtitle: "Останні розміри улюблених моделей", image: "/demo/banner-sale.webp", link: "/shop?flag=sale", buttonLabel: "До розпродажу", position: 0 },
+      { placement: "MEGA_MENU", title: "Спорт-студія", subtitle: "Нова колекція для тренувань", image: "/demo/editorial-active.webp", link: "/collections/active-studio", buttonLabel: "Дивитись", position: 0 },
+      { placement: "MEGA_MENU", title: "Базовий гардероб", subtitle: "Щоденна база", image: "/demo/editorial-essentials.webp", link: "/collections/essentials", buttonLabel: "Дивитись", position: 1 },
+      { placement: "CATALOG", title: "Знижки до −30%", subtitle: "Останні розміри улюблених моделей", image: "/demo/banner-sale.webp", link: "/shop?flag=sale", buttonLabel: "До розпродажу", position: 0 },
       { placement: "HOMEPAGE", title: "Мінус 10% на перше замовлення", subtitle: "Промокод WELCOME10 у кошику", image: "/demo/banner-sale.webp", link: "/shop", buttonLabel: "Почати покупки", position: 0 },
     ],
   });
@@ -354,31 +356,31 @@ async function seedCatalog() {
       subtitle: "Щільний трикотаж, чисті лінії та посадка, створена для вашого ритму.",
       image: "/demo/hero-desktop.webp",
       mobileImage: "/demo/hero-mobile.webp",
-      buttonLabel: "Shop women",
+      buttonLabel: "До каталогу",
       buttonLink: "/shop",
-      button2Label: "Shop new in",
+      button2Label: "Новинки",
       button2Link: "/shop?flag=new",
       textColor: "#111111",
       config: { align: "left", height: "full" },
     },
-    { type: "PRODUCT_CAROUSEL", title: "New & Trending", subtitle: "Те, що обирають цього тижня", buttonLabel: "Дивитись усе", buttonLink: "/shop?flag=new", config: { source: "new", limit: 10 } },
-    { type: "CATEGORY_GRID", title: "Shop by category", config: { slugs: ["hoodies", "leggings", "sports-bras", "sweatshirts", "pants", "caps"] } },
-    { type: "PRODUCT_GRID", title: "Best Sellers", subtitle: "Моделі, до яких повертаються", buttonLabel: "Усі бестселери", buttonLink: "/shop?flag=bestseller", config: { source: "bestseller", limit: 8 } },
+    { type: "PRODUCT_CAROUSEL", title: "Новинки та тренди", subtitle: "Те, що обирають цього тижня", buttonLabel: "Дивитись усе", buttonLink: "/shop?flag=new", config: { source: "new", limit: 10 } },
+    { type: "CATEGORY_GRID", title: "Категорії", config: { slugs: ["hoodies", "leggings", "sports-bras", "sweatshirts", "pants", "caps"] } },
+    { type: "PRODUCT_GRID", title: "Бестселери", subtitle: "Моделі, до яких повертаються", buttonLabel: "Усі бестселери", buttonLink: "/shop?flag=bestseller", config: { source: "bestseller", limit: 8 } },
     {
       type: "IMAGE_TEXT",
-      label: "Active Studio",
+      label: "Спорт-студія",
       title: "Створено для студії. Залишається з вами на весь день.",
-      body: "Нульова прозорість, моделюючий пояс і тканина, що висихає за хвилини. Колекція Active Studio — для тих, хто рухається у власному темпі.",
+      body: "Нульова прозорість, моделюючий пояс і тканина, що висихає за хвилини. Колекція «Спорт-студія» — для тих, хто рухається у власному темпі.",
       image: "/demo/editorial-active.webp",
       buttonLabel: "Дослідити колекцію",
       buttonLink: "/collections/active-studio",
       background: "#f3f1ec",
       config: { layout: "left" },
     },
-    { type: "PRODUCT_CAROUSEL", title: "New Arrivals", buttonLabel: "Всі новинки", buttonLink: "/shop?sort=newest", config: { source: "latest", limit: 10 } },
-    { type: "COLLECTION", title: "Shop by collection", subtitle: "Колекції з власним характером", config: {} },
-    { type: "BANNER", title: "Sale до −30%", subtitle: "Останні розміри улюблених моделей — поки вони є.", image: "/demo/banner-sale.webp", buttonLabel: "До розпродажу", buttonLink: "/shop?flag=sale", textColor: "#ffffff", config: {} },
-    { type: "PRODUCT_CAROUSEL", title: "Sale", buttonLabel: "Усі знижки", buttonLink: "/shop?flag=sale", config: { source: "sale", limit: 10 } },
+    { type: "PRODUCT_CAROUSEL", title: "Нові надходження", buttonLabel: "Всі новинки", buttonLink: "/shop?sort=newest", config: { source: "latest", limit: 10 } },
+    { type: "COLLECTION", title: "Колекції", subtitle: "Колекції з власним характером", config: {} },
+    { type: "BANNER", title: "Знижки до −30%", subtitle: "Останні розміри улюблених моделей — поки вони є.", image: "/demo/banner-sale.webp", buttonLabel: "До розпродажу", buttonLink: "/shop?flag=sale", textColor: "#ffffff", config: {} },
+    { type: "PRODUCT_CAROUSEL", title: "Розпродаж", buttonLabel: "Усі знижки", buttonLink: "/shop?flag=sale", config: { source: "sale", limit: 10 } },
     {
       type: "TEXT",
       label: "Про VELLA",

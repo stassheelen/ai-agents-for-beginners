@@ -15,14 +15,14 @@ export function useAdminAction() {
       setPending(true);
       try {
         const res = await fn();
-        if (!res.ok) toast.error(res.error ?? "Error");
+        if (!res.ok) toast.error(res.error ?? "Помилка");
         else {
-          if (!opts?.silent) toast.success(opts?.success ?? res.message ?? "Saved");
+          if (!opts?.silent) toast.success(opts?.success ?? res.message ?? "Збережено");
           router.refresh();
         }
         return res;
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Error");
+        toast.error(e instanceof Error ? e.message : "Помилка");
         return null;
       } finally {
         setPending(false);

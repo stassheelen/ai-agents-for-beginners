@@ -10,42 +10,42 @@ export async function buildNav(): Promise<{ items: NavItem[]; announcements: { i
   const nav = await getNavigation();
   const promos = nav.megaBanners.slice(0, 2);
   const colorCol = (base: string): NavColumn => ({
-    title: "Shop by color",
+    title: "Кольори",
     links: nav.colors.map((c) => ({ label: c.name, href: `${base}${base.includes("?") ? "&" : "?"}color=${c.slug}`, swatch: c.hex })),
   });
   const clothing = nav.categories.find((c) => c.slug === "clothing");
 
   const items: NavItem[] = [
     {
-      label: "New",
+      label: "Новинки",
       href: "/shop?flag=new",
       columns: [
         {
-          title: "New",
+          title: "Новинки",
           links: [
-            { label: "New arrivals", href: "/shop?flag=new" },
-            { label: "Trending", href: "/shop?flag=featured" },
-            { label: "New collections", href: "/collections" },
+            { label: "Нові надходження", href: "/shop?flag=new" },
+            { label: "У тренді", href: "/shop?flag=featured" },
+            { label: "Нові колекції", href: "/collections" },
           ],
         },
-        { title: "Collections", links: nav.collections.map((c) => ({ label: c.name, href: `/collections/${c.slug}` })) },
+        { title: "Колекції", links: nav.collections.map((c) => ({ label: c.name, href: `/collections/${c.slug}` })) },
       ],
       promos,
     },
     {
-      label: "Shop",
+      label: "Магазин",
       href: "/shop",
       columns: [
         {
-          title: "Shop",
+          title: "Магазин",
           links: [
-            { label: "All products", href: "/shop" },
-            { label: "Best sellers", href: "/shop?flag=bestseller" },
-            { label: "Sets", href: "/shop/sets" },
-            { label: "Sale", href: "/shop?flag=sale" },
+            { label: "Усі товари", href: "/shop" },
+            { label: "Бестселери", href: "/shop?flag=bestseller" },
+            { label: "Комплекти", href: "/shop/sets" },
+            { label: "Розпродаж", href: "/shop?flag=sale" },
           ],
         },
-        ...(clothing ? [{ title: "Clothing", links: clothing.children.map((c) => ({ label: c.name, href: `/shop/${c.slug}` })) }] : []),
+        ...(clothing ? [{ title: clothing.name, links: clothing.children.map((c) => ({ label: c.name, href: `/shop/${c.slug}` })) }] : []),
         colorCol("/shop"),
       ],
       promos: promos.slice(0, 1),
@@ -54,12 +54,12 @@ export async function buildNav(): Promise<{ items: NavItem[]; announcements: { i
       label: cat.name,
       href: `/shop/${cat.slug}`,
       columns: [
-        { title: cat.name, links: [{ label: `All ${cat.name.toLowerCase()}`, href: `/shop/${cat.slug}` }, ...cat.children.map((c) => ({ label: c.name, href: `/shop/${c.slug}` }))] },
+        { title: cat.name, links: [{ label: "Переглянути все", href: `/shop/${cat.slug}` }, ...cat.children.map((c) => ({ label: c.name, href: `/shop/${c.slug}` }))] },
         colorCol(`/shop/${cat.slug}`),
       ],
       promos: promos.slice(0, 1),
     })),
-    { label: "Sale", href: "/shop?flag=sale", columns: [], promos: [], highlight: true },
+    { label: "Розпродаж", href: "/shop?flag=sale", columns: [], promos: [], highlight: true },
   ];
   return { items, announcements: nav.announcements };
 }

@@ -170,7 +170,7 @@ export function ProductDetailView({
               extra={
                 sizeGuide ? (
                   <button onClick={() => setSizeGuideOpen(true)} className="inline-flex items-center gap-1.5 underline underline-offset-4">
-                    <Ruler className="size-3.5" strokeWidth={1.5} /> Size guide
+                    <Ruler className="size-3.5" strokeWidth={1.5} /> Таблиця розмірів
                   </button>
                 ) : null
               }
@@ -182,12 +182,12 @@ export function ProductDetailView({
             <div className="space-y-2.5">
               <Button size="lg" className="w-full" disabled={pending || (variant ? variant.stock <= 0 : !colorAvailable)} onClick={() => onAdd(false)}>
                 {pending && !buying && <Loader2 className="animate-spin" />}
-                {variant && variant.stock <= 0 ? "Немає в наявності" : "Add to bag"}
+                {variant && variant.stock <= 0 ? "Немає в наявності" : "Додати в кошик"}
               </Button>
               <div className="grid grid-cols-[1fr_auto] gap-2.5">
                 <Button size="lg" variant="outline" className="w-full" disabled={pending || (variant ? variant.stock <= 0 : !colorAvailable)} onClick={() => onAdd(true)}>
                   {buying && <Loader2 className="animate-spin" />}
-                  Buy now
+                  Купити зараз
                 </Button>
                 <WishlistButton productId={product.id} className="h-13 border border-border px-4 hover:border-foreground" />
               </div>
@@ -231,7 +231,7 @@ export function ProductDetailView({
             </p>
           </div>
           <Button onClick={() => onAdd(false)} disabled={pending || Boolean(variant && variant.stock <= 0)} className="shrink-0">
-            {pending ? <Loader2 className="animate-spin" /> : needsSize ? "Оберіть розмір" : "Add to bag"}
+            {pending ? <Loader2 className="animate-spin" /> : needsSize ? "Оберіть розмір" : "Додати в кошик"}
           </Button>
         </div>
       </div>

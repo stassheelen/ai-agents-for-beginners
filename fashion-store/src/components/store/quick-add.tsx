@@ -84,7 +84,7 @@ export function QuickAdd() {
               <div className="space-y-3">
                 <Button className="w-full" size="lg" disabled={!variant || variant.stock <= 0 || pending} onClick={onAdd}>
                   {pending && <Loader2 className="animate-spin" />}
-                  {!size && product.sizes.length > 1 ? "Оберіть розмір" : "Add to bag"}
+                  {!size && product.sizes.length > 1 ? "Оберіть розмір" : "Додати в кошик"}
                 </Button>
                 <Link href={`/products/${product.slug}`} className="block text-center text-xs underline underline-offset-4" onClick={() => openQuickAdd(null)}>
                   Детальніше про товар

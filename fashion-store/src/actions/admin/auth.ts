@@ -16,8 +16,8 @@ export async function loginAction(_: unknown, formData: FormData): Promise<{ err
   } catch (e) {
     if (e instanceof AuthError) {
       const code = (e as AuthError & { code?: string }).code;
-      if (code === "rate_limited") return { error: "Too many sign-in attempts. Try again in 15 minutes.", email };
-      return { error: "Invalid email or password", email };
+      if (code === "rate_limited") return { error: "Забагато спроб входу. Спробуйте через 15 хвилин.", email };
+      return { error: "Невірний email або пароль", email };
     }
     throw e; // NEXT_REDIRECT
   }

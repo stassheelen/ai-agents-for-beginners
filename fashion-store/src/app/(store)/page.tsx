@@ -23,7 +23,7 @@ export default async function HomePage() {
       {sections.length === 0 ? (
         <section className="container-page flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
           <h1 className="font-display text-4xl">{settings.storeName}</h1>
-          <p className="text-sm text-muted-foreground">Головна сторінка ще не налаштована. Додайте секції в адмін-панелі → Homepage.</p>
+          <p className="text-sm text-muted-foreground">Головна сторінка ще не налаштована. Додайте секції в адмін-панелі → Головна сторінка.</p>
           <Button asChild>
             <Link href="/shop">До каталогу</Link>
           </Button>

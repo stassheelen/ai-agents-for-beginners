@@ -1,7 +1,31 @@
 import "server-only";
+import { z } from "zod";
 import { headers } from "next/headers";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+
+z.config(z.locales.uk());
+
+const FIELD_LABELS: Record<string, string> = {
+  name: "Назва",
+  sku: "Артикул",
+  slug: "Адреса (slug)",
+  price: "Ціна",
+  title: "Заголовок",
+  code: "Код",
+  value: "Значення",
+  variants: "Варіанти",
+  images: "Фото",
+  link: "Посилання",
+  buttonLink: "Посилання кнопки",
+  button2Link: "Посилання другої кнопки",
+  background: "Фон",
+  textColor: "Колір тексту",
+  accentColor: "Акцентний колір",
+  storeName: "Назва магазину",
+  currency: "Валюта",
+  instagramUrl: "Instagram",
+};
 
 export class UnauthorizedError extends Error {
   constructor() {
@@ -35,15 +59,15 @@ export async function assertSameOrigin(req: Request) {
 export type ActionResult<T = undefined> = { ok: true; data?: T; message?: string } | { ok: false; error: string };
 
 export function actionError(e: unknown): { ok: false; error: string } {
-  if (e instanceof UnauthorizedError) return { ok: false, error: "Unauthorized" };
+  if (e instanceof UnauthorizedError) return { ok: false, error: "Немає доступу. Увійдіть знову." };
   if (e && typeof e === "object" && "code" in e && (e as { code: string }).code === "P2002") {
     const target = (e as { meta?: { target?: string[] | string } }).meta?.target;
-    return { ok: false, error: `Value must be unique${target ? `: ${Array.isArray(target) ? target.join(", ") : target}` : ""}` };
+    return { ok: false, error: `Значення має бути унікальним${target ? `: ${(Array.isArray(target) ? target : [target]).map((t) => FIELD_LABELS[t] ?? t).join(", ")}` : ""}` };
   }
   if (e && typeof e === "object" && "issues" in e) {
     const issues = (e as { issues: { path: (string | number)[]; message: string }[] }).issues;
-    return { ok: false, error: issues.map((i) => `${i.path.join(".") || "field"}: ${i.message}`).join("; ") };
+    return { ok: false, error: issues.map((i) => `${i.path.map((p) => FIELD_LABELS[String(p)] ?? String(p)).join(".") || "Поле"}: ${i.message}`).join("; ") };
   }
   console.error(e);
-  return { ok: false, error: e instanceof Error ? e.message : "Something went wrong" };
+  return { ok: false, error: e instanceof Error ? e.message : "Щось пішло не так" };
 }

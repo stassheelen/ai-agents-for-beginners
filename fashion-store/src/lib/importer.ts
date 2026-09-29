@@ -17,32 +17,32 @@ import { slugify, toMinor } from "@/lib/utils";
  */
 
 export const IMPORT_COLUMNS = [
-  "SKU",
-  "Parent SKU",
-  "Product Name",
-  "Category",
-  "Subcategory",
-  "Collection",
-  "Color",
-  "Color Hex",
-  "Size",
-  "Price",
-  "Compare Price",
-  "Cost",
-  "Stock",
-  "Description",
-  "Short Description",
-  "Image URL",
-  "Status",
-  "Tags",
-  "Material",
-  "Care",
-  "Brand",
-  "SEO Title",
-  "SEO Description",
-  "Featured",
-  "New",
-  "Best Seller",
+  "Артикул",
+  "Артикул моделі",
+  "Назва",
+  "Категорія",
+  "Підкатегорія",
+  "Колекція",
+  "Колір",
+  "Код кольору",
+  "Розмір",
+  "Ціна",
+  "Стара ціна",
+  "Собівартість",
+  "Залишок",
+  "Опис",
+  "Короткий опис",
+  "Фото URL",
+  "Статус",
+  "Теги",
+  "Склад",
+  "Догляд",
+  "Бренд",
+  "SEO заголовок",
+  "SEO опис",
+  "Рекомендований",
+  "Новинка",
+  "Бестселер",
 ] as const;
 
 type Field =
@@ -74,32 +74,32 @@ type Field =
   | "bestSeller";
 
 const ALIASES: Record<Field, string[]> = {
-  sku: ["sku", "variantsku", "артикул", "код"],
-  parentSku: ["parentsku", "productsku", "handle", "groupsku", "модель"],
+  sku: ["sku", "variantsku", "артикул", "артикулваріанту", "код"],
+  parentSku: ["parentsku", "productsku", "handle", "groupsku", "модель", "артикулмоделі", "артикултовару"],
   name: ["productname", "name", "title", "назва", "назватовару"],
   category: ["category", "категорія"],
   subcategory: ["subcategory", "підкатегорія"],
   collection: ["collection", "collections", "колекція"],
   color: ["color", "colour", "колір"],
-  colorHex: ["colorhex", "hex", "colourhex"],
+  colorHex: ["colorhex", "hex", "colourhex", "кодкольору"],
   size: ["size", "розмір"],
   price: ["price", "sellingprice", "ціна"],
-  compareAt: ["compareprice", "compareatprice", "oldprice", "стараціна"],
+  compareAt: ["compareprice", "compareatprice", "oldprice", "стараціна", "ціназастарою"],
   cost: ["cost", "costprice", "собівартість"],
   stock: ["stock", "qty", "quantity", "inventory", "залишок", "кількість"],
   description: ["description", "опис"],
   shortDescription: ["shortdescription", "короткийопис"],
-  images: ["imageurl", "image", "images", "imageurls", "фото", "зображення"],
+  images: ["imageurl", "image", "images", "imageurls", "фото", "фотоurl", "зображення"],
   status: ["status", "статус"],
   tags: ["tags", "теги"],
   material: ["material", "склад", "матеріал"],
   care: ["care", "careinstructions", "догляд"],
   brand: ["brand", "бренд"],
-  seoTitle: ["seotitle"],
-  seoDescription: ["seodescription"],
-  featured: ["featured"],
-  isNew: ["new", "isnew"],
-  bestSeller: ["bestseller", "bestsellers"],
+  seoTitle: ["seotitle", "seoзаголовок"],
+  seoDescription: ["seodescription", "seoопис"],
+  featured: ["featured", "рекомендований"],
+  isNew: ["new", "isnew", "новинка"],
+  bestSeller: ["bestseller", "bestsellers", "бестселер"],
 };
 
 const norm = (h: string) => h.toLowerCase().replace(/[^a-zа-яіїєґ0-9]/gi, "");
@@ -118,6 +118,18 @@ const COLOR_HEX: Record<string, string> = {
   red: "#9b2d2d",
   pink: "#e3b5b8",
   cream: "#ece4d4",
+  чорний: "#1c1c1c",
+  білий: "#f4f2ee",
+  сірий: "#a3a4a2",
+  коричневий: "#5e4436",
+  бежевий: "#d6c5ab",
+  блакитний: "#7b90a8",
+  синій: "#1f2a44",
+  зелений: "#5f6549",
+  оливковий: "#5f6549",
+  червоний: "#9b2d2d",
+  рожевий: "#e3b5b8",
+  молочний: "#ece4d4",
 };
 
 export type ParsedRow = { row: number; data: Partial<Record<Field, string>> };
@@ -172,7 +184,7 @@ export async function parseFile(file: File): Promise<{ rows: ParsedRow[]; unknow
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(await file.arrayBuffer());
     const ws = wb.worksheets[0];
-    if (!ws) throw new Error("The workbook has no sheets");
+    if (!ws) throw new Error("У файлі немає аркушів");
     ws.eachRow({ includeEmpty: false }, (row) => {
       const values: string[] = [];
       const count = Math.max(row.cellCount, ws.columnCount);
@@ -191,10 +203,10 @@ export async function parseFile(file: File): Promise<{ rows: ParsedRow[]; unknow
       table.push(values);
     });
   } else {
-    throw new Error("Unsupported file type. Upload .csv or .xlsx");
+    throw new Error("Непідтримуваний тип файлу. Завантажте .csv або .xlsx");
   }
-  if (table.length < 2) throw new Error("The file has no data rows");
-  if (table.length - 1 > MAX_ROWS) throw new Error(`Too many rows (max ${MAX_ROWS}). Split the file.`);
+  if (table.length < 2) throw new Error("У файлі немає рядків з даними");
+  if (table.length - 1 > MAX_ROWS) throw new Error(`Забагато рядків (максимум ${MAX_ROWS}). Розділіть файл.`);
 
   const header = table[0].map((h) => String(h ?? ""));
   const map: (Field | null)[] = header.map((h) => {
@@ -202,8 +214,8 @@ export async function parseFile(file: File): Promise<{ rows: ParsedRow[]; unknow
     return (Object.keys(ALIASES) as Field[]).find((f) => ALIASES[f].includes(n)) ?? null;
   });
   const unknownColumns = header.filter((h, i) => h.trim() && !map[i]);
-  if (!map.includes("sku")) throw new Error("Missing required column: SKU");
-  if (!map.includes("name")) throw new Error("Missing required column: Product Name");
+  if (!map.includes("sku")) throw new Error("Відсутня обовʼязкова колонка: Артикул (SKU)");
+  if (!map.includes("name")) throw new Error("Відсутня обовʼязкова колонка: Назва");
 
   const rows: ParsedRow[] = [];
   for (let r = 1; r < table.length; r++) {
@@ -221,17 +233,17 @@ export async function parseFile(file: File): Promise<{ rows: ParsedRow[]; unknow
 // ───────────────────────────── Planning ─────────────────────────────
 
 function rowError(d: Partial<Record<Field, string>>): string | null {
-  if (!d.sku) return "SKU is required";
-  if (d.sku.length > 64) return "SKU is too long (max 64)";
-  if (!d.name) return "Product Name is required";
-  if (!d.price || toMinor(d.price) === null || toMinor(d.price)! < 0) return `Invalid price: "${d.price ?? ""}"`;
-  if (d.compareAt && toMinor(d.compareAt) === null) return `Invalid compare price: "${d.compareAt}"`;
-  if (d.cost && toMinor(d.cost) === null) return `Invalid cost: "${d.cost}"`;
-  if (d.stock && !/^-?\d+$/.test(d.stock.replace(/\s/g, ""))) return `Invalid stock: "${d.stock}"`;
-  if (d.status && !["draft", "published", "active", "archived", "чернетка", "опубліковано"].includes(d.status.toLowerCase())) return `Invalid status: "${d.status}" (use Draft / Published / Archived)`;
-  if (d.colorHex && !/^#?[0-9a-f]{6}$/i.test(d.colorHex)) return `Invalid color hex: "${d.colorHex}"`;
+  if (!d.sku) return "Не вказано артикул (SKU)";
+  if (d.sku.length > 64) return "Артикул задовгий (максимум 64 символи)";
+  if (!d.name) return "Не вказано назву товару";
+  if (!d.price || toMinor(d.price) === null || toMinor(d.price)! < 0) return `Некоректна ціна: "${d.price ?? ""}"`;
+  if (d.compareAt && toMinor(d.compareAt) === null) return `Некоректна стара ціна: "${d.compareAt}"`;
+  if (d.cost && toMinor(d.cost) === null) return `Некоректна собівартість: "${d.cost}"`;
+  if (d.stock && !/^-?\d+$/.test(d.stock.replace(/\s/g, ""))) return `Некоректний залишок: "${d.stock}"`;
+  if (d.status && !["draft", "published", "active", "archived", "чернетка", "опубліковано", "архів"].includes(d.status.toLowerCase())) return `Некоректний статус: "${d.status}" (Чернетка / Опубліковано / Архів)`;
+  if (d.colorHex && !/^#?[0-9a-f]{6}$/i.test(d.colorHex)) return `Некоректний код кольору: "${d.colorHex}"`;
   for (const url of splitImages(d.images)) {
-    if (!url.startsWith("/") && !/^https?:\/\/\S+$/i.test(url)) return `Invalid image URL: "${url}"`;
+    if (!url.startsWith("/") && !/^https?:\/\/\S+$/i.test(url)) return `Некоректне посилання на фото: "${url}"`;
   }
   return null;
 }
@@ -272,7 +284,7 @@ export async function planImport(rows: ParsedRow[], unknownColumns: string[] = [
     }
     const sku = d.sku!.toUpperCase();
     if (seen.has(sku)) {
-      plans.push({ ...base, action: "duplicate", message: "SKU appears more than once in the file — row skipped" });
+      plans.push({ ...base, action: "duplicate", message: "Артикул повторюється у файлі — рядок пропущено" });
       continue;
     }
     seen.add(sku);
@@ -282,10 +294,10 @@ export async function planImport(rows: ParsedRow[], unknownColumns: string[] = [
 
     if (variantBySku.has(sku)) {
       updatedVariants++;
-      plans.push({ ...base, action: "update", message: "Existing SKU — will be updated" });
+      plans.push({ ...base, action: "update", message: "Артикул уже існує — товар буде оновлено" });
     } else {
       newVariants++;
-      plans.push({ ...base, action: groupProduct.get(groupKey) ? "update" : "create", message: groupProduct.get(groupKey) ? "New variant for existing product" : undefined });
+      plans.push({ ...base, action: groupProduct.get(groupKey) ? "update" : "create", message: groupProduct.get(groupKey) ? "Новий варіант для наявного товару" : undefined });
     }
   }
 
@@ -313,7 +325,7 @@ function statusOf(v?: string): ProductStatus | undefined {
   if (!v) return undefined;
   const s = v.toLowerCase();
   if (["published", "active", "опубліковано"].includes(s)) return "PUBLISHED";
-  if (["archived"].includes(s)) return "ARCHIVED";
+  if (["archived", "архів"].includes(s)) return "ARCHIVED";
   return "DRAFT";
 }
 
@@ -379,7 +391,7 @@ async function resolveImages(urls: string[], alt: string, warn: (w: string) => v
       const m = await importRemoteFile(url, alt);
       out.push(m.url);
     } catch (e) {
-      warn(`Image not imported (${url}): ${e instanceof Error ? e.message : "error"}`);
+      warn(`Фото не імпортовано (${url}): ${e instanceof Error ? e.message : "помилка"}`);
     }
   }
   return out;
@@ -399,12 +411,12 @@ export async function commitImport(rows: ParsedRow[]): Promise<ImportResult> {
     const p = planByRow.get(r.row)!;
     if (p.action === "error") {
       result.errors++;
-      result.errorRows.push({ row: r.row, sku: p.sku, error: p.message ?? "Invalid row" });
+      result.errorRows.push({ row: r.row, sku: p.sku, error: p.message ?? "Некоректний рядок" });
       continue;
     }
     if (p.action === "duplicate") {
       result.skipped++;
-      result.errorRows.push({ row: r.row, sku: p.sku, error: p.message ?? "Duplicate" });
+      result.errorRows.push({ row: r.row, sku: p.sku, error: p.message ?? "Дублікат" });
       continue;
     }
     const list = groups.get(p.groupKey) ?? [];
@@ -509,7 +521,7 @@ export async function commitImport(rows: ParsedRow[]): Promise<ImportResult> {
             } else {
               // A variant with the same color/size may already exist under another SKU
               const clash = await tx.productVariant.findFirst({ where: { productId: product.id, colorId, size: d.size ? d.size.toUpperCase() : null } });
-              if (clash) throw new Error(`Row ${r.row}: product already has a ${[d.color, d.size].filter(Boolean).join(" / ")} variant (SKU ${clash.sku})`);
+              if (clash) throw new Error(`Рядок ${r.row}: у товару вже є варіант ${[d.color, d.size].filter(Boolean).join(" / ")} (артикул ${clash.sku})`);
               await tx.productVariant.create({
                 data: { productId: product.id, sku: d.sku!, colorId, size: d.size ? d.size.toUpperCase() : null, stock: stock ?? 0, price: price !== basePrice ? price : null, position: idx },
               });
@@ -523,10 +535,10 @@ export async function commitImport(rows: ParsedRow[]): Promise<ImportResult> {
       if (existingProduct) result.updated++;
       else result.created++;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Import failed";
+      const msg = e instanceof Error ? e.message : "Помилка імпорту";
       for (const r of groupRows) {
         result.errors++;
-        result.errorRows.push({ row: r.row, sku: r.data.sku ?? "", error: msg.includes("Unique constraint") ? "Unique constraint violation (SKU or slug already used)" : msg });
+        result.errorRows.push({ row: r.row, sku: r.data.sku ?? "", error: msg.includes("Unique constraint") ? "Порушення унікальності (артикул або адреса вже використовуються)" : msg });
       }
     }
   }
@@ -538,8 +550,8 @@ export async function commitImport(rows: ParsedRow[]): Promise<ImportResult> {
 export function templateRows(): string[][] {
   return [
     [...IMPORT_COLUMNS],
-    ["VL-TEST-001-BLK-S", "VL-TEST-001", "Studio Rib Leggings", "Clothing", "Leggings", "Essentials", "Black", "#1c1c1c", "S", "2190", "2590", "700", "15", "High-rise rib leggings.", "Rib leggings", "https://example.com/images/leggings-black.jpg", "Published", "leggings, rib", "76% polyamide, 24% elastane", "Wash at 30°C", "VELLA", "", "", "no", "yes", "no"],
-    ["VL-TEST-001-BLK-M", "VL-TEST-001", "Studio Rib Leggings", "Clothing", "Leggings", "Essentials", "Black", "#1c1c1c", "M", "2190", "2590", "700", "21", "", "", "", "Published", "", "", "", "", "", "", "", "", ""],
-    ["VL-TEST-001-WHT-S", "VL-TEST-001", "Studio Rib Leggings", "Clothing", "Leggings", "Essentials", "White", "#f4f2ee", "S", "2190", "2590", "700", "8", "", "", "", "Published", "", "", "", "", "", "", "", "", ""],
+    ["VL-TEST-001-BLK-S", "VL-TEST-001", "Легінси Studio в рубчик", "Одяг", "Легінси", "Базовий гардероб", "Чорний", "#1c1c1c", "S", "2190", "2590", "700", "15", "Легінси з високою посадкою.", "Легінси в рубчик", "https://example.com/images/leggings-black.jpg", "Опубліковано", "легінси, рубчик", "76% поліамід, 24% еластан", "Прання при 30°C", "VELLA", "", "", "ні", "так", "ні"],
+    ["VL-TEST-001-BLK-M", "VL-TEST-001", "Легінси Studio в рубчик", "Одяг", "Легінси", "Базовий гардероб", "Чорний", "#1c1c1c", "M", "2190", "2590", "700", "21", "", "", "", "Опубліковано", "", "", "", "", "", "", "", "", ""],
+    ["VL-TEST-001-WHT-S", "VL-TEST-001", "Легінси Studio в рубчик", "Одяг", "Легінси", "Базовий гардероб", "Білий", "#f4f2ee", "S", "2190", "2590", "700", "8", "", "", "", "Опубліковано", "", "", "", "", "", "", "", "", ""],
   ];
 }

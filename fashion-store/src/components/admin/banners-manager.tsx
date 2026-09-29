@@ -15,10 +15,10 @@ type Placement = "ANNOUNCEMENT" | "HOMEPAGE" | "MEGA_MENU" | "CATALOG";
 type Banner = { id?: string; placement: Placement; title: string; subtitle: string; image: string | null; mobileImage: string | null; buttonLabel: string; link: string; active: boolean; startsAt: string; endsAt: string };
 
 const PLACEMENTS: { value: Placement; label: string; hint: string }[] = [
-  { value: "ANNOUNCEMENT", label: "Announcement bar", hint: "Rotating messages in the top bar (title + link)" },
-  { value: "MEGA_MENU", label: "Mega menu", hint: "Promo tiles inside the desktop mega menu (first 2)" },
-  { value: "CATALOG", label: "Catalog", hint: "Reserved for catalog placements" },
-  { value: "HOMEPAGE", label: "Homepage", hint: "Reusable homepage promo banners" },
+  { value: "ANNOUNCEMENT", label: "Рядок оголошень", hint: "Повідомлення, що змінюються у верхньому рядку (заголовок + посилання)" },
+  { value: "MEGA_MENU", label: "Мега-меню", hint: "Промо-плитки в мега-меню на десктопі (перші 2)" },
+  { value: "CATALOG", label: "Каталог", hint: "Зарезервовано для розміщень у каталозі" },
+  { value: "HOMEPAGE", label: "Головна", hint: "Промо-банери для головної сторінки" },
 ];
 
 export function BannersManager({ banners }: { banners: (Banner & { id: string })[] }) {
@@ -29,7 +29,7 @@ export function BannersManager({ banners }: { banners: (Banner & { id: string })
     <>
       <div className="mb-4 flex justify-end">
         <Button size="sm" onClick={() => setEditing({ placement: "ANNOUNCEMENT", title: "", subtitle: "", image: null, mobileImage: null, buttonLabel: "", link: "", active: true, startsAt: "", endsAt: "" })}>
-          <Plus /> Add banner
+          <Plus /> Додати банер
         </Button>
       </div>
       <div className="space-y-4">
@@ -51,26 +51,26 @@ export function BannersManager({ banners }: { banners: (Banner & { id: string })
                       {p.value !== "ANNOUNCEMENT" && <div className="relative h-10 w-16 shrink-0 bg-muted">{b.image && <Image src={b.image} alt="" fill sizes="64px" className="object-cover" />}</div>}
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium">
-                          {b.title} {!b.active && <Badge variant="warning">off</Badge>} {scheduled && <Badge variant="muted">scheduled</Badge>}
+                          {b.title} {!b.active && <Badge variant="warning">вимкнено</Badge>} {scheduled && <Badge variant="muted">за розкладом</Badge>}
                         </p>
-                        <p className="truncate text-[11px] text-muted-foreground">{b.link || "no link"}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">{b.link || "без посилання"}</p>
                       </div>
-                      <button className="p-1.5 hover:bg-muted" disabled={pending} onClick={() => run(() => moveBanner(b.id, -1), { silent: true })} aria-label="Up">
+                      <button className="p-1.5 hover:bg-muted" disabled={pending} onClick={() => run(() => moveBanner(b.id, -1), { silent: true })} aria-label="Вгору">
                         <ArrowUp className="size-4" />
                       </button>
-                      <button className="p-1.5 hover:bg-muted" disabled={pending} onClick={() => run(() => moveBanner(b.id, 1), { silent: true })} aria-label="Down">
+                      <button className="p-1.5 hover:bg-muted" disabled={pending} onClick={() => run(() => moveBanner(b.id, 1), { silent: true })} aria-label="Вниз">
                         <ArrowDown className="size-4" />
                       </button>
-                      <button className="p-1.5 hover:bg-muted" onClick={() => setEditing(b)} aria-label="Edit">
+                      <button className="p-1.5 hover:bg-muted" onClick={() => setEditing(b)} aria-label="Редагувати">
                         <Pencil className="size-4" />
                       </button>
-                      <button className="p-1.5 hover:bg-muted hover:text-destructive" onClick={() => confirm("Delete banner?") && run(() => deleteBanner(b.id))} aria-label="Delete">
+                      <button className="p-1.5 hover:bg-muted hover:text-destructive" onClick={() => confirm("Видалити банер?") && run(() => deleteBanner(b.id))} aria-label="Видалити">
                         <Trash2 className="size-4" />
                       </button>
                     </li>
                   );
                 })}
-                {list.length === 0 && <li className="px-4 py-6 text-center text-xs text-muted-foreground">No banners</li>}
+                {list.length === 0 && <li className="px-4 py-6 text-center text-xs text-muted-foreground">Банерів немає</li>}
               </ul>
             </Card>
           );
@@ -78,7 +78,7 @@ export function BannersManager({ banners }: { banners: (Banner & { id: string })
       </div>
       <Dialog open={Boolean(editing)} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="max-w-2xl">
-          <DialogTitle>{editing?.id ? "Edit banner" : "New banner"}</DialogTitle>
+          <DialogTitle>{editing?.id ? "Редагування банера" : "Новий банер"}</DialogTitle>
           {editing && (
             <form
               className="mt-5 space-y-4"
@@ -90,7 +90,7 @@ export function BannersManager({ banners }: { banners: (Banner & { id: string })
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Placement</Label>
+                  <Label>Розміщення</Label>
                   <NativeSelect value={editing.placement} onChange={(e) => setEditing({ ...editing, placement: e.target.value as Placement })}>
                     {PLACEMENTS.map((p) => (
                       <option key={p.value} value={p.value}>
@@ -100,47 +100,47 @@ export function BannersManager({ banners }: { banners: (Banner & { id: string })
                   </NativeSelect>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Title *</Label>
+                  <Label>Заголовок *</Label>
                   <Input value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} required />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Subtitle</Label>
+                  <Label>Підзаголовок</Label>
                   <Input value={editing.subtitle} onChange={(e) => setEditing({ ...editing, subtitle: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Link</Label>
+                  <Label>Посилання</Label>
                   <Input value={editing.link} onChange={(e) => setEditing({ ...editing, link: e.target.value })} placeholder="/shop?flag=sale" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Button text</Label>
+                  <Label>Текст кнопки</Label>
                   <Input value={editing.buttonLabel} onChange={(e) => setEditing({ ...editing, buttonLabel: e.target.value })} />
                 </div>
               </div>
               {editing.placement !== "ANNOUNCEMENT" && (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <MediaField label="Image" value={editing.image} onChange={(v) => setEditing({ ...editing, image: v })} />
-                  <MediaField label="Mobile image" value={editing.mobileImage} onChange={(v) => setEditing({ ...editing, mobileImage: v })} />
+                  <MediaField label="Зображення" value={editing.image} onChange={(v) => setEditing({ ...editing, image: v })} />
+                  <MediaField label="Зображення для мобільних" value={editing.mobileImage} onChange={(v) => setEditing({ ...editing, mobileImage: v })} />
                 </div>
               )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Starts at</Label>
+                  <Label>Початок показу</Label>
                   <Input type="datetime-local" value={editing.startsAt} onChange={(e) => setEditing({ ...editing, startsAt: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Ends at</Label>
+                  <Label>Кінець показу</Label>
                   <Input type="datetime-local" value={editing.endsAt} onChange={(e) => setEditing({ ...editing, endsAt: e.target.value })} />
                 </div>
               </div>
               <label className="flex items-center gap-2">
-                <Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> Active
+                <Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> Активний
               </label>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="ghost" onClick={() => setEditing(null)}>
-                  Cancel
+                  Скасувати
                 </Button>
                 <Button type="submit" disabled={pending}>
-                  Save
+                  Зберегти
                 </Button>
               </div>
             </form>

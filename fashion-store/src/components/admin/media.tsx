@@ -32,7 +32,7 @@ export function useUploader() {
               if (res.ok && res.data) out.push(res.data);
               else if (!res.ok) toast.error(`${file.name}: ${res.error}`);
             } catch (e) {
-              toast.error(`${file.name}: ${e instanceof Error ? e.message : "upload failed"}`);
+              toast.error(`${file.name}: ${e instanceof Error ? e.message : "не завантажено"}`);
             }
           }
         } else {
@@ -40,11 +40,11 @@ export function useUploader() {
           files.forEach((f) => fd.append("files", f));
           const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
           const json = (await res.json()) as { media?: (MediaItem & { createdAt: string })[]; errors?: string[]; error?: string };
-          if (!res.ok) toast.error(json.error ?? "Upload failed");
+          if (!res.ok) toast.error(json.error ?? "Помилка завантаження");
           json.errors?.forEach((e) => toast.error(e));
           out.push(...(json.media ?? []));
         }
-        if (out.length) toast.success(`Uploaded ${out.length} file(s)`);
+        if (out.length) toast.success(`Завантажено файлів: ${out.length}`);
       } finally {
         setUploading(false);
       }
@@ -82,9 +82,9 @@ export function Dropzone({ onFiles, uploading, compact, accept = ACCEPT, multipl
     >
       {uploading ? <Loader2 className="size-5 animate-spin" /> : <Upload className="size-5" strokeWidth={1.5} />}
       <p className="text-xs">
-        <span className="font-medium">Drag & drop</span> or click to upload
+        <span className="font-medium">Перетягніть файли</span> або натисніть, щоб завантажити
       </p>
-      {!compact && <p className="text-[11px] text-muted-foreground">JPG, PNG, WEBP, AVIF, GIF up to 8 MB · MP4/WEBM video</p>}
+      {!compact && <p className="text-[11px] text-muted-foreground">JPG, PNG, WEBP, AVIF, GIF до 8 МБ · відео MP4/WEBM</p>}
       <input
         ref={input}
         type="file"
@@ -151,11 +151,11 @@ export function MediaLibrary({
   const toggle = (id: string) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : multiple || !selectable ? [...s, id] : [id]));
 
   const remove = async () => {
-    if (!selected.length || !confirm(`Delete ${selected.length} file(s)? Files used on the site will be kept.`)) return;
+    if (!selected.length || !confirm(`Видалити файли (${selected.length})? Файли, що використовуються на сайті, буде збережено.`)) return;
     const res = await deleteMedia(selected);
     if (!res.ok) return toast.error(res.error);
     if (res.message) toast.message(res.message);
-    else toast.success("Deleted");
+    else toast.success("Видалено");
     setSelected([]);
     load(true);
   };
@@ -168,7 +168,7 @@ export function MediaLibrary({
     if (!res.ok) return toast.error(res.error);
     setItems((prev) => [res.data!, ...prev]);
     setUrlInput("");
-    toast.success("Imported");
+    toast.success("Імпортовано");
   };
 
   return (
@@ -177,19 +177,19 @@ export function MediaLibrary({
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search files…" className="h-9 pl-9" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Пошук файлів…" className="h-9 pl-9" />
         </div>
         {typeFilter === "ALL" && (
           <div className="flex border border-border bg-white">
             {(["ALL", "IMAGE", "VIDEO"] as const).map((t) => (
               <button key={t} onClick={() => setType(t)} className={cn("px-3 py-2 text-xs", type === t ? "bg-foreground text-white" : "hover:bg-muted")}>
-                {t === "ALL" ? "All" : t === "IMAGE" ? "Images" : "Videos"}
+                {t === "ALL" ? "Усі" : t === "IMAGE" ? "Зображення" : "Відео"}
               </button>
             ))}
           </div>
         )}
         <div className="flex gap-2">
-          <Input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} placeholder="https://… import by URL" className="h-9 md:w-64" />
+          <Input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} placeholder="https://… імпорт за посиланням" className="h-9 md:w-64" />
           <Button variant="outline" size="sm" className="h-9" onClick={importUrl} disabled={importing}>
             {importing ? <Loader2 className="animate-spin" /> : <Link2 />}
           </Button>
@@ -197,18 +197,18 @@ export function MediaLibrary({
       </div>
       {selected.length > 0 && (
         <div className="flex items-center gap-3 border border-border bg-white px-3 py-2">
-          <span className="text-xs">{selected.length} selected</span>
+          <span className="text-xs">Вибрано: {selected.length}</span>
           {selectable ? (
             <Button size="sm" onClick={() => onSelect?.(items.filter((i) => selected.includes(i.id)))}>
-              <Check /> Use selected
+              <Check /> Використати вибрані
             </Button>
           ) : (
             <Button size="sm" variant="destructive" onClick={remove}>
-              <Trash2 /> Delete
+              <Trash2 /> Видалити
             </Button>
           )}
           <button className="ml-auto text-xs underline" onClick={() => setSelected([])}>
-            Clear
+            Скинути
           </button>
         </div>
       )}
@@ -237,11 +237,11 @@ export function MediaLibrary({
                 </p>
                 <button
                   type="button"
-                  aria-label="Copy URL"
+                  aria-label="Копіювати посилання"
                   className="shrink-0 p-0.5 text-muted-foreground hover:text-foreground"
                   onClick={() => {
                     const full = m.url.startsWith("http") ? m.url : `${window.location.origin}${m.url}`;
-                    navigator.clipboard.writeText(full).then(() => toast.success("URL copied"));
+                    navigator.clipboard.writeText(full).then(() => toast.success("Посилання скопійовано"));
                   }}
                 >
                   <Copy className="size-3.5" />
@@ -258,14 +258,14 @@ export function MediaLibrary({
       {!loading && items.length === 0 && (
         <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
           <ImageIcon className="size-6" />
-          <p className="text-xs">No files yet</p>
+          <p className="text-xs">Файлів ще немає</p>
         </div>
       )}
       {loading && <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" />}
       {cursor && !loading && (
         <div className="text-center">
           <Button variant="outline" size="sm" onClick={() => load(false, cursor)}>
-            Load more
+            Завантажити ще
           </Button>
         </div>
       )}
@@ -289,7 +289,7 @@ export function MediaPickerDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
-        <DialogTitle>Media library</DialogTitle>
+        <DialogTitle>Медіа-бібліотека</DialogTitle>
         <div className="mt-4">
           {open && (
             <MediaLibrary
@@ -345,17 +345,17 @@ export function MediaField({
           )}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <Input value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} placeholder={type === "VIDEO" ? "/video.mp4 or https://…" : "/image.webp or https://…"} className="h-9" />
+          <Input value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} placeholder={type === "VIDEO" ? "/video.mp4 або https://…" : "/image.webp або https://…"} className="h-9" />
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => setOpen(true)}>
-              Library
+              Бібліотека
             </Button>
             <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => input.current?.click()} disabled={uploading}>
-              {uploading ? <Loader2 className="animate-spin" /> : <Upload />} Upload
+              {uploading ? <Loader2 className="animate-spin" /> : <Upload />} Завантажити
             </Button>
             {value && (
               <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => onChange(null)}>
-                <X /> Remove
+                <X /> Прибрати
               </Button>
             )}
           </div>

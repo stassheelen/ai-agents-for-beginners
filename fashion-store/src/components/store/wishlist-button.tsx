@@ -20,7 +20,7 @@ export function WishlistButton({ productId, className, withLabel = false }: { pr
       className={cn("inline-flex items-center gap-2", className)}
     >
       <Heart className={cn("size-[18px] transition-colors", active && "fill-foreground")} strokeWidth={1.5} />
-      {withLabel && <span className="text-xs font-medium uppercase tracking-[0.12em]">{active ? "У списку бажань" : "Wishlist"}</span>}
+      {withLabel && <span className="text-xs font-medium uppercase tracking-[0.12em]">{active ? "У списку бажань" : "В обране"}</span>}
     </button>
   );
 }

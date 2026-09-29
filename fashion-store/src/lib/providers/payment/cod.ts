@@ -2,7 +2,7 @@ import type { PaymentProvider } from "./types";
 
 export const cashOnDelivery: PaymentProvider = {
   id: "cod",
-  name: "Cash on delivery (накладений платіж)",
+  name: "Накладений платіж",
   method: "cod",
   isConfigured: () => true,
   async createPayment() {
@@ -17,7 +17,7 @@ export const cashOnDelivery: PaymentProvider = {
  */
 export const manualCard: PaymentProvider = {
   id: "manual",
-  name: "Card — manual invoice",
+  name: "Картка — рахунок від менеджера",
   method: "card",
   isConfigured: () => true,
   async createPayment() {

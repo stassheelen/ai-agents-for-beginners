@@ -8,13 +8,13 @@ import { OrderStatusBadge } from "@/components/admin/status";
 import { Card, CardContent, CardHeader, CardTitle, Table, TD, TH, THead, TR } from "@/components/ui/misc";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
 
-export const metadata = { title: "Dashboard" };
+export const metadata = { title: "Огляд" };
 
 const RANGES = {
-  today: { label: "Today", days: 1 },
-  "7d": { label: "7 days", days: 7 },
-  "30d": { label: "30 days", days: 30 },
-  "12m": { label: "12 months", days: 365 },
+  today: { label: "Сьогодні", days: 1 },
+  "7d": { label: "7 днів", days: 7 },
+  "30d": { label: "30 днів", days: 30 },
+  "12m": { label: "12 місяців", days: 365 },
 } as const;
 type Range = keyof typeof RANGES;
 
@@ -30,7 +30,7 @@ function buckets(range: Range, now: Date) {
   } else if (range === "12m") {
     for (let m = 11; m >= 0; m--) {
       const s = new Date(now.getFullYear(), now.getMonth() - m, 1);
-      out.push({ key: `m${s.getFullYear()}-${s.getMonth()}`, label: s.toLocaleString("en", { month: "short" }), start: s });
+      out.push({ key: `m${s.getFullYear()}-${s.getMonth()}`, label: s.toLocaleString("uk-UA", { month: "short" }), start: s });
     }
   } else {
     const days = RANGES[range].days;
@@ -101,18 +101,18 @@ export default async function Dashboard(props: PageProps<"/admin">) {
   const totalSales = agg._sum.total ?? 0;
   const count = agg._count;
   const stats = [
-    { label: "Total sales", value: formatMoney(totalSales) },
-    { label: "Orders", value: String(count) },
-    { label: "Average order value", value: formatMoney(count ? Math.round(totalSales / count) : 0) },
-    { label: "Products", value: String(productCount), hint: "published" },
-    { label: "Customers", value: String(customerCount), hint: `+${newCustomers} in period` },
+    { label: "Продажі", value: formatMoney(totalSales) },
+    { label: "Замовлення", value: String(count) },
+    { label: "Середній чек", value: formatMoney(count ? Math.round(totalSales / count) : 0) },
+    { label: "Товари", value: String(productCount), hint: "опубліковано" },
+    { label: "Клієнти", value: String(customerCount), hint: `+${newCustomers} за період` },
   ];
 
   return (
     <>
       <PageHeader
-        title="Dashboard"
-        description="Store performance overview (cancelled orders excluded)"
+        title="Огляд"
+        description="Показники магазину (без скасованих замовлень)"
         actions={
           <div className="flex border border-border bg-white">
             {(Object.keys(RANGES) as Range[]).map((r) => (
@@ -135,7 +135,7 @@ export default async function Dashboard(props: PageProps<"/admin">) {
 
       <Card className="mt-4">
         <CardHeader>
-          <CardTitle>Sales · {RANGES[range].label}</CardTitle>
+          <CardTitle>Продажі · {RANGES[range].label}</CardTitle>
         </CardHeader>
         <CardContent>
           <SalesChart data={series} />
@@ -145,19 +145,19 @@ export default async function Dashboard(props: PageProps<"/admin">) {
       <div className="mt-4 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Recent orders</CardTitle>
+            <CardTitle>Останні замовлення</CardTitle>
             <Link href="/admin/orders" className="text-xs underline">
-              View all
+              Усі
             </Link>
           </CardHeader>
           <Table>
             <THead>
               <tr>
-                <TH>Order</TH>
-                <TH>Customer</TH>
-                <TH>Date</TH>
-                <TH>Status</TH>
-                <TH className="text-right">Total</TH>
+                <TH>Замовлення</TH>
+                <TH>Клієнт</TH>
+                <TH>Дата</TH>
+                <TH>Статус</TH>
+                <TH className="text-right">Сума</TH>
               </tr>
             </THead>
             <tbody>
@@ -183,7 +183,7 @@ export default async function Dashboard(props: PageProps<"/admin">) {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Top products</CardTitle>
+            <CardTitle>Топ товарів</CardTitle>
           </CardHeader>
           <ul className="divide-y divide-border">
             {topItems.map((t) => {
@@ -195,19 +195,19 @@ export default async function Dashboard(props: PageProps<"/admin">) {
                   <Link href={`/admin/products/${p.id}`} className="flex-1 truncate hover:underline">
                     {p.name}
                   </Link>
-                  <span className="text-muted-foreground">{t._sum.quantity} sold</span>
+                  <span className="text-muted-foreground">{t._sum.quantity} шт.</span>
                   <span className="w-24 text-right">{formatMoney(t._sum.total ?? 0)}</span>
                 </li>
               );
             })}
-            {topItems.length === 0 && <li className="px-5 py-8 text-center text-muted-foreground">No sales in this period</li>}
+            {topItems.length === 0 && <li className="px-5 py-8 text-center text-muted-foreground">Немає продажів за цей період</li>}
           </ul>
         </Card>
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <StockCard title="Low stock" items={lowStock.map((v) => ({ ...v, stockLabel: `${v.stock} left` }))} />
-        <StockCard title={`Out of stock (${outOfStockCount})`} items={outOfStock.map((v) => ({ ...v, stockLabel: "0" }))} />
+        <StockCard title="Закінчується" items={lowStock.map((v) => ({ ...v, stockLabel: `залишилось ${v.stock}` }))} />
+        <StockCard title={`Немає в наявності (${outOfStockCount})`} items={outOfStock.map((v) => ({ ...v, stockLabel: "0" }))} />
       </div>
     </>
   );
@@ -225,7 +225,7 @@ function StockCard({
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <Link href="/admin/inventory" className="text-xs underline">
-          Inventory
+          Склад
         </Link>
       </CardHeader>
       <ul className="divide-y divide-border">
@@ -242,7 +242,7 @@ function StockCard({
             <span className="shrink-0 text-xs font-medium">{v.stockLabel}</span>
           </li>
         ))}
-        {items.length === 0 && <li className="px-5 py-8 text-center text-muted-foreground">All good</li>}
+        {items.length === 0 && <li className="px-5 py-8 text-center text-muted-foreground">Усе гаразд</li>}
       </ul>
     </Card>
   );

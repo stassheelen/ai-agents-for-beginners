@@ -21,7 +21,7 @@ export default async function CategoryPage(props: PageProps<"/shop/[slug]">) {
   const cat = await getCategoryBySlug(slug);
   if (!cat) notFound();
   const params = parseCatalogParams(sp);
-  const crumbs = [{ name: "Головна", href: "/" }, { name: "Shop", href: "/shop" }];
+  const crumbs = [{ name: "Головна", href: "/" }, { name: "Каталог", href: "/shop" }];
   if (cat.parent) crumbs.push({ name: cat.parent.name, href: `/shop/${cat.parent.slug}` });
   crumbs.push({ name: cat.name, href: `/shop/${cat.slug}` });
   return (

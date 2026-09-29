@@ -23,7 +23,7 @@ export async function updateOrder(input: z.input<typeof schema>): Promise<Action
     await requireAdmin();
     const d = schema.parse(input);
     const order = await prisma.order.findUnique({ where: { id: d.id }, include: { items: true } });
-    if (!order) return { ok: false, error: "Order not found" };
+    if (!order) return { ok: false, error: "Замовлення не знайдено" };
     const wasActive = !INACTIVE.includes(order.status);
     const willBeActive = d.status ? !INACTIVE.includes(d.status) : wasActive;
 
@@ -40,7 +40,7 @@ export async function updateOrder(input: z.input<typeof schema>): Promise<Action
         for (const i of order.items) {
           if (!i.variantId) continue;
           const r = await tx.productVariant.updateMany({ where: { id: i.variantId, stock: { gte: i.quantity } }, data: { stock: { decrement: i.quantity } } });
-          if (r.count === 0) throw new StockError(`Not enough stock to reactivate: ${i.name} (${i.sku})`);
+          if (r.count === 0) throw new StockError(`Недостатньо залишку, щоб відновити: ${i.name} (${i.sku})`);
           if (i.productId) await tx.product.updateMany({ where: { id: i.productId }, data: { salesCount: { increment: i.quantity } } });
         }
         if (order.customerId) await tx.customer.update({ where: { id: order.customerId }, data: { ordersCount: { increment: 1 }, totalSpent: { increment: order.total } } });
@@ -56,7 +56,7 @@ export async function updateOrder(input: z.input<typeof schema>): Promise<Action
       });
     });
     if (wasActive !== willBeActive) invalidateStore();
-    return { ok: true, message: wasActive && !willBeActive ? "Order updated — items returned to stock" : "Order updated" };
+    return { ok: true, message: wasActive && !willBeActive ? "Замовлення оновлено — товари повернуто на склад" : "Замовлення оновлено" };
   } catch (e) {
     if (e instanceof StockError) return { ok: false, error: e.message };
     return actionError(e);
@@ -69,5 +69,5 @@ export async function bulkOrderStatus(ids: string[], status: OrderStatus): Promi
     const r = await updateOrder({ id, status });
     if (!r.ok) failed++;
   }
-  return failed ? { ok: false, error: `${failed} order(s) could not be updated` } : { ok: true, message: `${ids.length} order(s) updated` };
+  return failed ? { ok: false, error: `Не вдалося оновити замовлень: ${failed}` } : { ok: true, message: `Оновлено замовлень: ${ids.length}` };
 }

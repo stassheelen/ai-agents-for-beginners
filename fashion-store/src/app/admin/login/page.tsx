@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { LoginForm } from "./login-form";
 
-export const metadata: Metadata = { title: "Admin login", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Вхід в адмін-панель", robots: { index: false, follow: false } };
 
 export default async function LoginPage(props: PageProps<"/admin/login">) {
   const session = await auth();
@@ -18,7 +18,7 @@ export default async function LoginPage(props: PageProps<"/admin/login">) {
     <div className="flex min-h-dvh items-center justify-center bg-soft p-4">
       <div className="w-full max-w-sm border border-border bg-white p-8">
         <p className="font-display text-lg font-semibold tracking-[0.28em]">VELLA</p>
-        <p className="mt-1 text-xs uppercase tracking-[0.14em] text-muted-foreground">Admin</p>
+        <p className="mt-1 text-xs uppercase tracking-[0.14em] text-muted-foreground">Адмін-панель</p>
         <LoginForm callbackUrl={path} />
       </div>
     </div>

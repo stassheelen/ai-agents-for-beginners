@@ -20,7 +20,7 @@ export function SalesChart({ data }: { data: { label: string; sales: number; ord
           <Tooltip
             cursor={{ stroke: "#111", strokeWidth: 1 }}
             contentStyle={{ borderRadius: 0, border: "1px solid #e5e2dc", fontSize: 12 }}
-            formatter={(value, name) => (name === "sales" ? [formatMoney(Number(value)), "Sales"] : [value, "Orders"])}
+            formatter={(value, name) => (name === "sales" ? [formatMoney(Number(value)), "Продажі"] : [value, "Замовлення"])}
           />
           <Area isAnimationActive={false} type="monotone" dataKey="sales" stroke="#111111" strokeWidth={1.5} fill="#111111" fillOpacity={0.06} />
         </AreaChart>

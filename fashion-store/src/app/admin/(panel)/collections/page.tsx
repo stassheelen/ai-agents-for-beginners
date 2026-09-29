@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/admin/shell";
 import { CollectionsManager } from "@/components/admin/collections-manager";
 
-export const metadata = { title: "Collections" };
+export const metadata = { title: "Колекції" };
 
 export default async function CollectionsPage() {
   const cols = await prisma.collection.findMany({
@@ -13,7 +13,7 @@ export default async function CollectionsPage() {
   });
   return (
     <>
-      <PageHeader title="Collections" description="Curated product groups with their own landing page at /collections/[slug]." />
+      <PageHeader title="Колекції" description="Добірки товарів із власною сторінкою /collections/[назва]." />
       <CollectionsManager
         collections={cols.map((c) => ({
           id: c.id,

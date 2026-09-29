@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ProductsTable } from "@/components/admin/products-table";
 import { AdminFilters } from "@/components/admin/filters";
 
-export const metadata = { title: "Products" };
+export const metadata = { title: "Товари" };
 const PER_PAGE = 25;
 
 export default async function ProductsPage(props: PageProps<"/admin/products">) {
@@ -78,36 +78,36 @@ export default async function ProductsPage(props: PageProps<"/admin/products">) 
     category: [p.category?.name, p.subcategory?.name].filter(Boolean).join(" › "),
     stock: p.variants.reduce((a, v) => a + v.stock, 0),
     variants: p.variants.length,
-    flags: [p.featured && "featured", p.isNew && "new", p.bestSeller && "bestseller", p.onSale && "sale"].filter(Boolean) as string[],
+    flags: [p.featured && "рекомендований", p.isNew && "новинка", p.bestSeller && "бестселер", p.onSale && "знижка"].filter(Boolean) as string[],
   }));
 
   return (
     <>
       <PageHeader
-        title="Products"
-        description={`${total} products`}
+        title="Товари"
+        description={`${total} товарів`}
         actions={
           <>
             <Button asChild variant="outline" size="sm">
               <Link href="/admin/products/import">
-                <FileSpreadsheet /> Import CSV / XLSX
+                <FileSpreadsheet /> Імпорт CSV / XLSX
               </Link>
             </Button>
             <Button asChild size="sm">
               <Link href="/admin/products/new">
-                <Plus /> Add product
+                <Plus /> Додати товар
               </Link>
             </Button>
           </>
         }
       />
       <AdminFilters
-        search={{ placeholder: "Search by name or SKU…" }}
+        search={{ placeholder: "Пошук за назвою або артикулом…" }}
         selects={[
-          { name: "status", label: "All statuses", options: [{ value: "PUBLISHED", label: "Published" }, { value: "DRAFT", label: "Draft" }, { value: "ARCHIVED", label: "Archived" }] },
-          { name: "category", label: "All categories", options: categories.map((c) => ({ value: c.id, label: c.parent ? `${c.parent.name} › ${c.name}` : c.name })) },
-          { name: "stock", label: "Any stock", options: [{ value: "low", label: "Low stock" }, { value: "out", label: "Out of stock" }] },
-          { name: "sort", label: "Newest first", options: [{ value: "created-asc", label: "Oldest first" }, { value: "name", label: "Name A–Z" }, { value: "price-asc", label: "Price ↑" }, { value: "price-desc", label: "Price ↓" }] },
+          { name: "status", label: "Усі статуси", options: [{ value: "PUBLISHED", label: "Опубліковано" }, { value: "DRAFT", label: "Чернетка" }, { value: "ARCHIVED", label: "Архів" }] },
+          { name: "category", label: "Усі категорії", options: categories.map((c) => ({ value: c.id, label: c.parent ? `${c.parent.name} › ${c.name}` : c.name })) },
+          { name: "stock", label: "Будь-який залишок", options: [{ value: "low", label: "Закінчується" }, { value: "out", label: "Немає в наявності" }] },
+          { name: "sort", label: "Спершу нові", options: [{ value: "created-asc", label: "Спершу старі" }, { value: "name", label: "Назва А–Я" }, { value: "price-asc", label: "Ціна ↑" }, { value: "price-desc", label: "Ціна ↓" }] },
         ]}
       />
       <ProductsTable products={products} page={page} pages={Math.max(1, Math.ceil(total / PER_PAGE))} />

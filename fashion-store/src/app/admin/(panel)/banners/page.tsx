@@ -2,13 +2,13 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/admin/shell";
 import { BannersManager } from "@/components/admin/banners-manager";
 
-export const metadata = { title: "Banners" };
+export const metadata = { title: "Банери" };
 
 export default async function BannersPage() {
   const banners = await prisma.banner.findMany({ orderBy: [{ placement: "asc" }, { position: "asc" }] });
   return (
     <>
-      <PageHeader title="Banners" description="Announcement bar messages, mega-menu promos and catalog / homepage banners. Optional schedule." />
+      <PageHeader title="Банери" description="Повідомлення рядка оголошень, промо в мега-меню та банери каталогу / головної. Можна налаштувати розклад показу." />
       <BannersManager
         banners={banners.map((b) => ({
           id: b.id,

@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       request: req,
       onBeforeGenerateToken: async (pathname) => {
         await requireAdmin();
-        if (!pathname.startsWith("media/")) throw new Error("Invalid path");
+        if (!pathname.startsWith("media/")) throw new Error("Некоректний шлях");
         return {
           allowedContentTypes: ["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif", "video/mp4", "video/webm"],
           maximumSizeInBytes: MAX_VIDEO_BYTES,
@@ -22,6 +22,6 @@ export async function POST(req: Request) {
     return Response.json(json);
   } catch (e) {
     const status = e instanceof UnauthorizedError ? 401 : 400;
-    return Response.json({ error: e instanceof Error ? e.message : "Upload error" }, { status });
+    return Response.json({ error: e instanceof Error ? e.message : "Помилка завантаження" }, { status });
   }
 }

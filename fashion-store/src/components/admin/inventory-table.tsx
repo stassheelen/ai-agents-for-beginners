@@ -22,24 +22,24 @@ export function InventoryTable({ variants, lowThreshold }: { variants: V[]; lowT
     setEdits({});
   }
   const changed = Object.entries(edits).filter(([id, v]) => v !== "" && Number(v) !== variants.find((x) => x.id === id)?.stock);
-  if (!variants.length) return <Card><EmptyState title="No variants" /></Card>;
+  if (!variants.length) return <Card><EmptyState title="Варіантів немає" /></Card>;
   return (
     <Card>
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-        <span className="text-xs text-muted-foreground">{changed.length ? `${changed.length} unsaved change(s)` : "Edit stock inline, then save"}</span>
+        <span className="text-xs text-muted-foreground">{changed.length ? `Незбережених змін: ${changed.length}` : "Змініть залишки в таблиці й збережіть"}</span>
         <Button size="sm" disabled={!changed.length || pending} onClick={() => run(() => updateVariantStock(changed.map(([id, v]) => ({ id, stock: Number(v) }))))}>
-          <Save /> Save stock
+          <Save /> Зберегти залишки
         </Button>
       </div>
       <Table>
         <THead>
           <tr>
-            <TH>Product</TH>
-            <TH>SKU</TH>
-            <TH>Color</TH>
-            <TH>Size</TH>
-            <TH>Status</TH>
-            <TH className="w-44">Stock</TH>
+            <TH>Товар</TH>
+            <TH>Артикул</TH>
+            <TH>Колір</TH>
+            <TH>Розмір</TH>
+            <TH>Статус</TH>
+            <TH className="w-44">Залишок</TH>
           </tr>
         </THead>
         <tbody>
@@ -67,7 +67,7 @@ export function InventoryTable({ variants, lowThreshold }: { variants: V[]; lowT
                 </TD>
                 <TD>
                   <div className="flex items-center gap-1">
-                    <button type="button" className="h-8 w-8 border border-border hover:border-foreground" onClick={() => setEdits({ ...edits, [v.id]: String(Math.max(0, n - 1)) })} aria-label="Decrease">
+                    <button type="button" className="h-8 w-8 border border-border hover:border-foreground" onClick={() => setEdits({ ...edits, [v.id]: String(Math.max(0, n - 1)) })} aria-label="Зменшити">
                       −
                     </button>
                     <Input
@@ -75,9 +75,9 @@ export function InventoryTable({ variants, lowThreshold }: { variants: V[]; lowT
                       onChange={(e) => setEdits({ ...edits, [v.id]: e.target.value.replace(/\D/g, "") })}
                       className={cn("h-8 w-16 text-center", n === 0 && "text-destructive", n > 0 && n <= lowThreshold && "text-[#9a6200]", edits[v.id] !== undefined && n !== v.stock && "border-foreground")}
                       inputMode="numeric"
-                      aria-label="Stock"
+                      aria-label="Залишок"
                     />
-                    <button type="button" className="h-8 w-8 border border-border hover:border-foreground" onClick={() => setEdits({ ...edits, [v.id]: String(n + 1) })} aria-label="Increase">
+                    <button type="button" className="h-8 w-8 border border-border hover:border-foreground" onClick={() => setEdits({ ...edits, [v.id]: String(n + 1) })} aria-label="Збільшити">
                       +
                     </button>
                   </div>

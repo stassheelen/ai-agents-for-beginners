@@ -25,7 +25,7 @@ export function ProductPicker({ value, onChange }: { value: PickedProduct[]; onC
       <div className="border border-border">
         <div className="relative border-b border-border">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search products…" className="h-9 border-0 pl-9" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Пошук товарів…" className="h-9 border-0 pl-9" />
         </div>
         <ul className="max-h-64 overflow-y-auto">
           {results.map((p) => (
@@ -40,13 +40,13 @@ export function ProductPicker({ value, onChange }: { value: PickedProduct[]; onC
         </ul>
       </div>
       <div className="border border-border">
-        <p className="border-b border-border px-3 py-2 text-xs text-muted-foreground">{value.length} selected</p>
+        <p className="border-b border-border px-3 py-2 text-xs text-muted-foreground">Вибрано: {value.length}</p>
         <ul className="max-h-64 overflow-y-auto">
           {value.map((p) => (
             <li key={p.id} className="flex items-center gap-2 px-3 py-1.5">
               <span className="relative size-8 shrink-0 bg-muted">{p.image && <Image src={p.image} alt="" fill sizes="32px" className="object-cover" />}</span>
               <span className="min-w-0 flex-1 truncate">{p.name}</span>
-              <button type="button" onClick={() => onChange(value.filter((x) => x.id !== p.id))} aria-label="Remove" className="p-1 hover:text-destructive">
+              <button type="button" onClick={() => onChange(value.filter((x) => x.id !== p.id))} aria-label="Прибрати" className="p-1 hover:text-destructive">
                 <X className="size-3.5" />
               </button>
             </li>

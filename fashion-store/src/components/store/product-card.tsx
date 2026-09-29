@@ -27,7 +27,7 @@ export function ProductCard({
   const swatchImage = hoverImage ?? preferred;
   const primary = swatchImage ?? product.images[0]?.url;
   const secondary = swatchImage ? null : product.images[1]?.url;
-  const badges = [product.isNew && "New", product.bestSeller && "Bestseller", product.onSale && "Sale"].filter(Boolean) as string[];
+  const badges = [product.isNew && "Новинка", product.bestSeller && "Бестселер", product.onSale && "Знижка"].filter(Boolean) as string[];
 
   return (
     <article className="group/card relative flex flex-col">
@@ -51,7 +51,7 @@ export function ProductCard({
         {badges.length > 0 && (
           <div className="pointer-events-none absolute left-2.5 top-2.5 flex flex-col items-start gap-1 sm:left-3 sm:top-3">
             {badges.slice(0, 2).map((b) => (
-              <span key={b} className={cn("bg-white px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] sm:text-[10px]", b === "Sale" && "text-destructive")}>
+              <span key={b} className={cn("bg-white px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] sm:text-[10px]", b === "Знижка" && "text-destructive")}>
                 {b}
               </span>
             ))}
@@ -68,7 +68,7 @@ export function ProductCard({
             aria-label={`Швидко додати ${product.name}`}
           >
             <Plus className="size-4 lg:hidden" strokeWidth={1.5} />
-            <span className="hidden text-[11px] font-medium uppercase tracking-[0.14em] lg:inline">Quick add</span>
+            <span className="hidden text-[11px] font-medium uppercase tracking-[0.14em] lg:inline">Швидко додати</span>
           </button>
         ) : (
           <span className="absolute inset-x-2 bottom-2 bg-white/90 py-2 text-center text-[10px] uppercase tracking-[0.14em] text-muted-foreground lg:inset-x-3 lg:bottom-3">

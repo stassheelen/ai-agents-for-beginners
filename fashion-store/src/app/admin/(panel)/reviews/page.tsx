@@ -5,7 +5,7 @@ import { Pagination } from "@/components/admin/filters";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Reviews" };
+export const metadata = { title: "Відгуки" };
 const PER_PAGE = 30;
 
 export default async function ReviewsPage(props: PageProps<"/admin/reviews">) {
@@ -19,11 +19,11 @@ export default async function ReviewsPage(props: PageProps<"/admin/reviews">) {
   ]);
   return (
     <>
-      <PageHeader title="Reviews" description="Customer reviews appear on product pages after approval." />
+      <PageHeader title="Відгуки" description="Відгуки клієнтів зʼявляються на сторінках товарів після схвалення." />
       <div className="mb-4 flex gap-1">
         {(["PENDING", "APPROVED", "REJECTED"] as const).map((s) => (
-          <Link key={s} href={`/admin/reviews?status=${s}`} className={cn("border px-3 py-1.5 text-xs capitalize", status === s ? "border-foreground bg-foreground text-white" : "border-border bg-white")}>
-            {s.toLowerCase()} <span className="opacity-60">{counts.find((c) => c.status === s)?._count ?? 0}</span>
+          <Link key={s} href={`/admin/reviews?status=${s}`} className={cn("border px-3 py-1.5 text-xs", status === s ? "border-foreground bg-foreground text-white" : "border-border bg-white")}>
+            {({ PENDING: "На модерації", APPROVED: "Схвалені", REJECTED: "Відхилені" } as const)[s]} <span className="opacity-60">{counts.find((c) => c.status === s)?._count ?? 0}</span>
           </Link>
         ))}
       </div>

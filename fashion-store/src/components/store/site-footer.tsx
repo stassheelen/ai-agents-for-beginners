@@ -9,7 +9,7 @@ export async function SiteFooter() {
       <div className="container-page grid gap-12 py-16 lg:grid-cols-12">
         <div className="lg:col-span-4">
           <p className="font-display text-xl font-semibold tracking-[0.28em]">{settings.storeName}</p>
-          <p className="mt-4 max-w-sm text-sm text-muted-foreground">{settings.tagline ?? "Premium activewear & essentials."}</p>
+          <p className="mt-4 max-w-sm text-sm text-muted-foreground">{settings.tagline ?? "Преміальний activewear та базовий гардероб."}</p>
           <NewsletterForm />
         </div>
         <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 lg:col-span-8">
@@ -21,7 +21,7 @@ export async function SiteFooter() {
               {nav.categories.map((c) => (
                 <li key={c.slug}><Link href={`/shop/${c.slug}`} className="hover:text-foreground">{c.name}</Link></li>
               ))}
-              <li><Link href="/shop?flag=sale" className="hover:text-foreground">Sale</Link></li>
+              <li><Link href="/shop?flag=sale" className="hover:text-foreground">Розпродаж</Link></li>
             </ul>
           </div>
           <div>

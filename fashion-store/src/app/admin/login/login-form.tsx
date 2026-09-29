@@ -15,12 +15,12 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
         <Input id="email" name="email" type="email" autoComplete="username" required defaultValue={state?.email} key={state?.email} />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">Пароль</Label>
         <Input id="password" name="password" type="password" autoComplete="current-password" required />
       </div>
       {state?.error && <p className="text-xs text-destructive">{state.error}</p>}
       <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? "Вхід…" : "Увійти"}
       </Button>
     </form>
   );

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/admin/shell";
 import { CategoriesManager } from "@/components/admin/categories-manager";
 
-export const metadata = { title: "Categories" };
+export const metadata = { title: "Категорії" };
 
 export default async function CategoriesPage() {
   const cats = await prisma.category.findMany({
@@ -11,7 +11,7 @@ export default async function CategoriesPage() {
   });
   return (
     <>
-      <PageHeader title="Categories" description="Nested categories. Top-level categories marked “Show in navigation” appear in the header mega menu." />
+      <PageHeader title="Категорії" description="Вкладені категорії. Категорії верхнього рівня з позначкою «Показувати в меню» зʼявляються в мега-меню шапки." />
       <CategoriesManager
         categories={cats.map((c) => ({
           id: c.id,

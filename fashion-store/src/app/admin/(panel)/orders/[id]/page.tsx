@@ -9,7 +9,7 @@ import { OrderStatusBadge, PaymentBadge } from "@/components/admin/status";
 import { DELIVERY_METHODS } from "@/lib/providers/delivery";
 import { formatDate, formatMoney } from "@/lib/utils";
 
-export const metadata = { title: "Order" };
+export const metadata = { title: "Замовлення" };
 
 export default async function OrderPage(props: PageProps<"/admin/orders/[id]">) {
   const { id } = await props.params;
@@ -18,10 +18,10 @@ export default async function OrderPage(props: PageProps<"/admin/orders/[id]">) 
   return (
     <>
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <Link href="/admin/orders" className="p-1.5 hover:bg-muted" aria-label="Back">
+        <Link href="/admin/orders" className="p-1.5 hover:bg-muted" aria-label="Назад">
           <ArrowLeft className="size-4" />
         </Link>
-        <h1 className="font-display text-2xl font-medium">Order #{o.number}</h1>
+        <h1 className="font-display text-2xl font-medium">Замовлення #{o.number}</h1>
         <OrderStatusBadge status={o.status} />
         <PaymentBadge status={o.paymentStatus} />
         <span className="text-muted-foreground">{formatDate(o.createdAt, true)}</span>
@@ -30,7 +30,7 @@ export default async function OrderPage(props: PageProps<"/admin/orders/[id]">) 
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Products</CardTitle>
+              <CardTitle>Товари</CardTitle>
             </CardHeader>
             <ul className="divide-y divide-border">
               {o.items.map((i) => (
@@ -56,10 +56,10 @@ export default async function OrderPage(props: PageProps<"/admin/orders/[id]">) 
               ))}
             </ul>
             <dl className="space-y-1.5 border-t border-border bg-soft px-5 py-4">
-              <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd>{formatMoney(o.subtotal, o.currency)}</dd></div>
-              {o.discount > 0 && <div className="flex justify-between"><dt className="text-muted-foreground">Discount {o.promotionCode && `(${o.promotionCode})`}</dt><dd>−{formatMoney(o.discount, o.currency)}</dd></div>}
-              <div className="flex justify-between"><dt className="text-muted-foreground">Delivery</dt><dd>{o.shippingCost ? formatMoney(o.shippingCost, o.currency) : "Free"}</dd></div>
-              <div className="flex justify-between border-t border-border pt-2 text-sm font-medium"><dt>Total</dt><dd>{formatMoney(o.total, o.currency)}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">Підсумок</dt><dd>{formatMoney(o.subtotal, o.currency)}</dd></div>
+              {o.discount > 0 && <div className="flex justify-between"><dt className="text-muted-foreground">Знижка {o.promotionCode && `(${o.promotionCode})`}</dt><dd>−{formatMoney(o.discount, o.currency)}</dd></div>}
+              <div className="flex justify-between"><dt className="text-muted-foreground">Доставка</dt><dd>{o.shippingCost ? formatMoney(o.shippingCost, o.currency) : "Безкоштовно"}</dd></div>
+              <div className="flex justify-between border-t border-border pt-2 text-sm font-medium"><dt>Разом</dt><dd>{formatMoney(o.total, o.currency)}</dd></div>
             </dl>
           </Card>
           <OrderEditor order={{ id: o.id, status: o.status, paymentStatus: o.paymentStatus, trackingNumber: o.trackingNumber ?? "", adminNote: o.adminNote ?? "" }} />
@@ -67,10 +67,10 @@ export default async function OrderPage(props: PageProps<"/admin/orders/[id]">) 
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Customer</CardTitle>
+              <CardTitle>Клієнт</CardTitle>
               {o.customer && (
                 <Link href={`/admin/customers/${o.customer.id}`} className="text-xs underline">
-                  {o.customer.ordersCount} orders
+                  Замовлень: {o.customer.ordersCount}
                 </Link>
               )}
             </CardHeader>
@@ -88,29 +88,29 @@ export default async function OrderPage(props: PageProps<"/admin/orders/[id]">) 
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Delivery</CardTitle>
+              <CardTitle>Доставка</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1">
               <p>{DELIVERY_METHODS.find((d) => d.id === o.deliveryMethod)?.label ?? o.deliveryMethod}</p>
               <p className="text-muted-foreground">{o.city}</p>
               <p className="text-muted-foreground">{o.deliveryAddress}</p>
-              {o.trackingNumber && <p className="pt-2">TTN: <strong>{o.trackingNumber}</strong></p>}
+              {o.trackingNumber && <p className="pt-2">ТТН: <strong>{o.trackingNumber}</strong></p>}
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Payment</CardTitle>
+              <CardTitle>Оплата</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1">
-              <p>{o.paymentMethod === "cod" ? "Cash on delivery" : "Card"}</p>
-              <p className="text-muted-foreground">Provider: {o.paymentProvider}</p>
-              {o.paymentRef && <p className="text-muted-foreground">Ref: {o.paymentRef}</p>}
+              <p>{o.paymentMethod === "cod" ? "Накладений платіж" : "Оплата карткою"}</p>
+              <p className="text-muted-foreground">Провайдер: {o.paymentProvider === "manual" ? "рахунок від менеджера" : o.paymentProvider === "cod" ? "при отриманні" : o.paymentProvider}</p>
+              {o.paymentRef && <p className="text-muted-foreground">ID платежу: {o.paymentRef}</p>}
             </CardContent>
           </Card>
           {o.comment && (
             <Card>
               <CardHeader>
-                <CardTitle>Customer comment</CardTitle>
+                <CardTitle>Коментар клієнта</CardTitle>
               </CardHeader>
               <CardContent className="whitespace-pre-line">{o.comment}</CardContent>
             </Card>

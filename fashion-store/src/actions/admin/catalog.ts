@@ -10,7 +10,7 @@ const opt = (max: number) => z.string().trim().max(max).optional().nullable().tr
 
 const categorySchema = z.object({
   id: z.string().optional(),
-  name: z.string().trim().min(1, "Name is required").max(80),
+  name: z.string().trim().min(1, "Вкажіть назву").max(80),
   slug: z.string().trim().max(100).optional(),
   parentId: z.string().optional().nullable().transform((v) => v || null),
   description: opt(2000),
@@ -26,12 +26,12 @@ export async function saveCategory(input: z.input<typeof categorySchema>): Promi
     await requireAdmin();
     const d = categorySchema.parse(input);
     const slug = slugify(d.slug || d.name);
-    if (!slug) return { ok: false, error: "Slug is required" };
+    if (!slug) return { ok: false, error: "Вкажіть адресу (slug)" };
     if (d.id && d.parentId) {
       // prevent cycles
       let cur: string | null = d.parentId;
       while (cur) {
-        if (cur === d.id) return { ok: false, error: "A category cannot be nested inside itself" };
+        if (cur === d.id) return { ok: false, error: "Категорію не можна вкласти саму в себе" };
         cur = (await prisma.category.findUnique({ where: { id: cur }, select: { parentId: true } }))?.parentId ?? null;
       }
     }
@@ -40,7 +40,7 @@ export async function saveCategory(input: z.input<typeof categorySchema>): Promi
       ? await prisma.category.update({ where: { id: d.id }, data })
       : await prisma.category.create({ data: { ...data, position: await prisma.category.count({ where: { parentId: d.parentId } }) } });
     invalidateStore();
-    return { ok: true, data: { id: row.id }, message: "Category saved" };
+    return { ok: true, data: { id: row.id }, message: "Категорію збережено" };
   } catch (e) {
     return actionError(e);
   }
@@ -50,14 +50,14 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
   try {
     await requireAdmin();
     const cat = await prisma.category.findUnique({ where: { id }, select: { parentId: true } });
-    if (!cat) return { ok: false, error: "Not found" };
+    if (!cat) return { ok: false, error: "Не знайдено" };
     // children move up one level; products keep their other categories
     await prisma.$transaction([
       prisma.category.updateMany({ where: { parentId: id }, data: { parentId: cat.parentId } }),
       prisma.category.delete({ where: { id } }),
     ]);
     invalidateStore();
-    return { ok: true, message: "Category deleted" };
+    return { ok: true, message: "Категорію видалено" };
   } catch (e) {
     return actionError(e);
   }
@@ -67,7 +67,7 @@ export async function moveCategory(id: string, dir: -1 | 1): Promise<ActionResul
   try {
     await requireAdmin();
     const cat = await prisma.category.findUnique({ where: { id } });
-    if (!cat) return { ok: false, error: "Not found" };
+    if (!cat) return { ok: false, error: "Не знайдено" };
     const siblings = await prisma.category.findMany({ where: { parentId: cat.parentId }, orderBy: [{ position: "asc" }, { name: "asc" }] });
     const idx = siblings.findIndex((s) => s.id === id);
     const swap = siblings[idx + dir];
@@ -84,7 +84,7 @@ export async function moveCategory(id: string, dir: -1 | 1): Promise<ActionResul
 
 const collectionSchema = z.object({
   id: z.string().optional(),
-  name: z.string().trim().min(1, "Name is required").max(80),
+  name: z.string().trim().min(1, "Вкажіть назву").max(80),
   slug: z.string().trim().max(100).optional(),
   description: opt(2000),
   heroImage: opt(1000),
@@ -109,7 +109,7 @@ export async function saveCollection(input: z.input<typeof collectionSchema>): P
       return c;
     });
     invalidateStore();
-    return { ok: true, data: { id: row.id }, message: "Collection saved" };
+    return { ok: true, data: { id: row.id }, message: "Колекцію збережено" };
   } catch (e) {
     return actionError(e);
   }
@@ -120,7 +120,7 @@ export async function deleteCollection(id: string): Promise<ActionResult> {
     await requireAdmin();
     await prisma.collection.delete({ where: { id } });
     invalidateStore();
-    return { ok: true, message: "Collection deleted" };
+    return { ok: true, message: "Колекцію видалено" };
   } catch (e) {
     return actionError(e);
   }

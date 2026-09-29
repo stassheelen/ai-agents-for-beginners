@@ -47,7 +47,7 @@ export function ProductsTable({ products, page, pages }: { products: Row[]; page
       const res = await fn();
       if (!res.ok) toast.error(res.error);
       else {
-        toast.success(res.message ?? "Done");
+        toast.success(res.message ?? "Готово");
         router.refresh();
       }
     } finally {
@@ -57,7 +57,7 @@ export function ProductsTable({ products, page, pages }: { products: Row[]; page
 
   const bulk = async (action: string) => {
     if (!action || !selected.length) return;
-    if (action === "delete" && !confirm(`Delete ${selected.length} product(s)? This cannot be undone.`)) return;
+    if (action === "delete" && !confirm(`Видалити товари (${selected.length})? Цю дію не можна скасувати.`)) return;
     const ids = selected;
     await run(() => {
       switch (action) {
@@ -81,11 +81,11 @@ export function ProductsTable({ products, page, pages }: { products: Row[]; page
     return (
       <Card>
         <EmptyState
-          title="No products found"
-          description="Try other filters or add your first product."
+          title="Товарів не знайдено"
+          description="Змініть фільтри або додайте перший товар."
           action={
             <Button asChild size="sm">
-              <Link href="/admin/products/new">Add product</Link>
+              <Link href="/admin/products/new">Додати товар</Link>
             </Button>
           }
         />
@@ -98,19 +98,19 @@ export function ProductsTable({ products, page, pages }: { products: Row[]; page
         <div className="flex flex-wrap items-center gap-3 border-b border-border bg-muted px-4 py-2.5">
           <span className="text-xs font-medium">{selected.length} selected</span>
           <NativeSelect className="h-8 w-56" value="" onChange={(e) => bulk(e.target.value)} disabled={busy}>
-            <option value="">Bulk actions…</option>
-            <option value="publish">Publish</option>
-            <option value="draft">Move to draft</option>
-            <option value="archive">Archive</option>
-            <option value="featured:1">Mark featured</option>
-            <option value="featured:0">Unmark featured</option>
-            <option value="isNew:1">Mark as new</option>
-            <option value="isNew:0">Unmark new</option>
-            <option value="bestSeller:1">Mark bestseller</option>
-            <option value="bestSeller:0">Unmark bestseller</option>
-            <option value="onSale:1">Mark sale</option>
-            <option value="onSale:0">Unmark sale</option>
-            <option value="delete">Delete</option>
+            <option value="">Масові дії…</option>
+            <option value="publish">Опублікувати</option>
+            <option value="draft">У чернетки</option>
+            <option value="archive">В архів</option>
+            <option value="featured:1">Позначити «Рекомендований»</option>
+            <option value="featured:0">Зняти «Рекомендований»</option>
+            <option value="isNew:1">Позначити «Новинка»</option>
+            <option value="isNew:0">Зняти «Новинка»</option>
+            <option value="bestSeller:1">Позначити «Бестселер»</option>
+            <option value="bestSeller:0">Зняти «Бестселер»</option>
+            <option value="onSale:1">Позначити «Знижка»</option>
+            <option value="onSale:0">Зняти «Знижка»</option>
+            <option value="delete">Видалити</option>
           </NativeSelect>
         </div>
       )}
@@ -121,17 +121,17 @@ export function ProductsTable({ products, page, pages }: { products: Row[]; page
               <Checkbox
                 checked={selected.length === products.length ? true : selected.length ? "indeterminate" : false}
                 onCheckedChange={(v) => setSelected(v ? products.map((p) => p.id) : [])}
-                aria-label="Select all"
+                aria-label="Вибрати всі"
               />
             </TH>
-            <TH className="w-14">Image</TH>
-            <TH>Product</TH>
-            <TH>SKU</TH>
-            <TH>Category</TH>
-            <TH className="text-right">Price</TH>
-            <TH className="text-right">Stock</TH>
-            <TH>Status</TH>
-            <TH>Created</TH>
+            <TH className="w-14">Фото</TH>
+            <TH>Товар</TH>
+            <TH>Артикул</TH>
+            <TH>Категорія</TH>
+            <TH className="text-right">Ціна</TH>
+            <TH className="text-right">Залишок</TH>
+            <TH>Статус</TH>
+            <TH>Створено</TH>
             <TH className="w-12" />
           </tr>
         </THead>
@@ -139,7 +139,7 @@ export function ProductsTable({ products, page, pages }: { products: Row[]; page
           {products.map((p) => (
             <TR key={p.id}>
               <TD>
-                <Checkbox checked={selected.includes(p.id)} onCheckedChange={(v) => setSelected((s) => (v ? [...s, p.id] : s.filter((x) => x !== p.id)))} aria-label={`Select ${p.name}`} />
+                <Checkbox checked={selected.includes(p.id)} onCheckedChange={(v) => setSelected((s) => (v ? [...s, p.id] : s.filter((x) => x !== p.id)))} aria-label={`Вибрати ${p.name}`} />
               </TD>
               <TD>
                 <div className="relative size-11 bg-muted">{p.image && <Image src={p.image} alt="" fill sizes="44px" className="object-cover" />}</div>
@@ -155,7 +155,7 @@ export function ProductsTable({ products, page, pages }: { products: Row[]; page
               <TD className="text-right">{formatMoney(p.price, p.currency)}</TD>
               <TD className="text-right">
                 <span className={p.stock === 0 ? "text-destructive" : p.stock <= 5 ? "text-[#9a6200]" : ""}>{p.stock}</span>
-                <span className="block text-[11px] text-muted-foreground">{p.variants} var.</span>
+                <span className="block text-[11px] text-muted-foreground">{p.variants} вар.</span>
               </TD>
               <TD>
                 <ProductStatusBadge status={p.status} />
@@ -163,12 +163,12 @@ export function ProductsTable({ products, page, pages }: { products: Row[]; page
               <TD className="whitespace-nowrap text-muted-foreground">{formatDate(p.createdAt)}</TD>
               <TD>
                 <DropdownMenu>
-                  <DropdownMenuTrigger className="p-1.5 hover:bg-muted" aria-label="Actions">
+                  <DropdownMenuTrigger className="p-1.5 hover:bg-muted" aria-label="Дії">
                     <MoreHorizontal className="size-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     <DropdownMenuItem onSelect={() => router.push(`/admin/products/${p.id}`)}>
-                      <Pencil /> Edit
+                      <Pencil /> Редагувати
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() =>
@@ -179,25 +179,25 @@ export function ProductsTable({ products, page, pages }: { products: Row[]; page
                         })
                       }
                     >
-                      <Copy /> Duplicate
+                      <Copy /> Дублювати
                     </DropdownMenuItem>
                     {p.status === "PUBLISHED" ? (
                       <DropdownMenuItem onSelect={() => run(() => setProductsStatus([p.id], "DRAFT"))}>
-                        <EyeOff /> Unpublish
+                        <EyeOff /> Зняти з публікації
                       </DropdownMenuItem>
                     ) : (
                       <DropdownMenuItem onSelect={() => run(() => setProductsStatus([p.id], "PUBLISHED"))}>
-                        <Eye /> Publish
+                        <Eye /> Опублікувати
                       </DropdownMenuItem>
                     )}
                     {p.status === "PUBLISHED" && (
                       <DropdownMenuItem onSelect={() => window.open(`/products/${p.slug}`, "_blank")}>
-                        <ExternalLink /> View in store
+                        <ExternalLink /> Переглянути в магазині
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive" onSelect={() => confirm(`Delete “${p.name}”?`) && run(() => deleteProducts([p.id]))}>
-                      <Trash2 /> Delete
+                    <DropdownMenuItem className="text-destructive" onSelect={() => confirm(`Видалити «${p.name}»?`) && run(() => deleteProducts([p.id]))}>
+                      <Trash2 /> Видалити
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
