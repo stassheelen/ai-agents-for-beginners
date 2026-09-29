@@ -351,14 +351,14 @@ async function seedCatalog() {
   const sections: { type: SectionType; [k: string]: unknown }[] = [
     {
       type: "HERO",
-      label: "Нова колекція — осінь 2026",
-      title: "Рух, що відчувається як спокій",
-      subtitle: "Щільний трикотаж, чисті лінії та посадка, створена для вашого ритму.",
+      label: "Нова колекція",
+      title: "Осінь 2026",
+      subtitle: "Худі з начосом, флісові куртки та широкі штани в коричневих, бежевих і оливкових відтінках.",
       image: "/demo/hero-desktop.webp",
       mobileImage: "/demo/hero-mobile.webp",
-      buttonLabel: "До каталогу",
-      buttonLink: "/shop",
-      button2Label: "Новинки",
+      buttonLabel: "Дивитись колекцію",
+      buttonLink: "/collections/new-season",
+      button2Label: "Усі новинки",
       button2Link: "/shop?flag=new",
       textColor: "#111111",
       config: { align: "left", height: "full" },
@@ -381,13 +381,6 @@ async function seedCatalog() {
     { type: "COLLECTION", title: "Колекції", subtitle: "Колекції з власним характером", config: {} },
     { type: "BANNER", title: "Знижки до −30%", subtitle: "Останні розміри улюблених моделей — поки вони є.", image: "/demo/banner-sale.webp", buttonLabel: "До розпродажу", buttonLink: "/shop?flag=sale", textColor: "#ffffff", config: {} },
     { type: "PRODUCT_CAROUSEL", title: "Розпродаж", buttonLabel: "Усі знижки", buttonLink: "/shop?flag=sale", config: { source: "sale", limit: 10 } },
-    {
-      type: "TEXT",
-      label: "Про VELLA",
-      title: "Менше речей. Кращі речі.",
-      body: "Ми створюємо одяг, який легко носити щодня: з відповідальних тканин, у стриманій палітрі, з увагою до кожного шва. Шиємо малими партіями в Україні.",
-      config: { align: "center" },
-    },
   ];
   for (const [i, s] of sections.entries()) {
     await prisma.homepageSection.create({ data: { ...(s as { type: SectionType }), position: i } });
