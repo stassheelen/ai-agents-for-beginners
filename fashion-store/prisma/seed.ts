@@ -1,7 +1,8 @@
 /**
  * Demo seed. Safe to run repeatedly:
  *  - always ensures Settings + the admin user from ADMIN_EMAIL / ADMIN_PASSWORD
- *  - loads the demo catalogue only when the database has no products,
+ *  - loads the demo catalogue only when the database has no products
+ *    (on Vercel builds additionally only when SEED_DEMO=1),
  *    or when SEED_RESET=1 is set (wipes catalogue, orders and content first).
  */
 import { PrismaClient, type OrderStatus, type SectionType } from "@prisma/client";
@@ -49,16 +50,16 @@ async function ensureSettings() {
     update: {},
     create: {
       id: "default",
-      storeName: "NORDFORM",
+      storeName: "VELLA",
       tagline: "Activewear & essentials",
       accentColor: "#1f1f1f",
       currency: "UAH",
       freeShippingThreshold: 200000,
       shippingFlatRate: 9000,
-      contactEmail: "hello@nordform.store",
+      contactEmail: "hello@vella.store",
       contactPhone: "+380 44 000 00 00",
       instagramUrl: "https://instagram.com/",
-      seoTitle: "NORDFORM — сучасний activewear та базовий гардероб",
+      seoTitle: "VELLA — сучасний activewear та базовий гардероб",
       seoDescription: "Мінімалістичний одяг для тренувань і щоденного життя. Легінси, худі, світшоти, бра та аксесуари з доставкою по Україні.",
       ogImage: "/demo/og-default.webp",
       sizeGuide:
@@ -116,7 +117,7 @@ async function seedCatalog() {
         showInNav: Boolean(cat.nav),
         position: i,
         image: cat.children[0]?.image ? `/demo/${imageName(cat.children[0].image[0], cat.children[0].image[1], 0)}` : "/demo/set-black-1.webp",
-        seoTitle: `${cat.name} — NORDFORM`,
+        seoTitle: `${cat.name} — VELLA`,
         seoDescription: cat.description,
       },
     });
@@ -129,7 +130,7 @@ async function seedCatalog() {
           parentId: parent.id,
           position: j,
           image: child.image ? `/demo/${imageName(child.image[0], child.image[1], 0)}` : null,
-          description: `${child.name} від NORDFORM.`,
+          description: `${child.name} від VELLA.`,
         },
       });
       categories.set(child.slug, row.id);
@@ -140,7 +141,7 @@ async function seedCatalog() {
   const collections = new Map<string, string>();
   for (const [i, c] of DEMO_COLLECTIONS.entries()) {
     const row = await prisma.collection.create({
-      data: { name: c.name, slug: c.slug, description: c.description, heroImage: c.image, position: i, seoTitle: `${c.name} — NORDFORM`, seoDescription: c.description },
+      data: { name: c.name, slug: c.slug, description: c.description, heroImage: c.image, position: i, seoTitle: `${c.name} — VELLA`, seoDescription: c.description },
     });
     collections.set(c.slug, row.id);
   }
@@ -178,7 +179,7 @@ async function seedCatalog() {
         sku: p.sku,
         name: p.name,
         slug: productSlug,
-        brand: "NORDFORM",
+        brand: "VELLA",
         shortDescription: p.short,
         description: `${p.short} Модель створена в нашій студії з увагою до посадки та відчуттів на тілі. Універсальна річ, яку легко поєднувати з рештою гардероба — від тренування до вечері.`,
         details: "• Вільна / анатомічна посадка залежно від моделі\n• Плоскі шви, що не натирають\n• Виготовлено в Україні\n• Модель на фото: зріст 172 см, розмір S",
@@ -199,7 +200,7 @@ async function seedCatalog() {
         bestSeller: Boolean(p.flags?.bestSeller),
         onSale: Boolean(p.compareAt),
         tags: p.tags,
-        seoTitle: `${p.name} — NORDFORM`,
+        seoTitle: `${p.name} — VELLA`,
         seoDescription: p.short,
         createdAt,
         images: { create: images },
@@ -380,7 +381,7 @@ async function seedCatalog() {
     { type: "PRODUCT_CAROUSEL", title: "Sale", buttonLabel: "Усі знижки", buttonLink: "/shop?flag=sale", config: { source: "sale", limit: 10 } },
     {
       type: "TEXT",
-      label: "Про NORDFORM",
+      label: "Про VELLA",
       title: "Менше речей. Кращі речі.",
       body: "Ми створюємо одяг, який легко носити щодня: з відповідальних тканин, у стриманій палітрі, з увагою до кожного шва. Шиємо малими партіями в Україні.",
       config: { align: "center" },
@@ -411,6 +412,11 @@ async function seedCatalog() {
 async function main() {
   await ensureSettings();
   await ensureAdmin();
+  // On Vercel builds the demo catalogue is only loaded when SEED_DEMO=1 (first deploy).
+  if (process.env.VERCEL && process.env.SEED_DEMO !== "1") {
+    console.log("Vercel build: SEED_DEMO is not 1 — demo catalogue skipped (admin/settings ensured).");
+    return;
+  }
   const existing = await prisma.product.count();
   if (existing > 0 && process.env.SEED_RESET !== "1") {
     console.log(`Catalogue already has ${existing} products — skipping demo data (set SEED_RESET=1 to reload).`);

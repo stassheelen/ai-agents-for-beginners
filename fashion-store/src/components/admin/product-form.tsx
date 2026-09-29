@@ -264,7 +264,7 @@ export function ProductForm({
                     <Input value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Sculpt High-Rise Leggings" />
                   </Field>
                   <Field label="SKU *" hint="Unique product code. Used by CSV import to match products.">
-                    <Input value={f.sku} onChange={(e) => set("sku", e.target.value.toUpperCase())} placeholder="NF-LG-001" className="font-mono" />
+                    <Input value={f.sku} onChange={(e) => set("sku", e.target.value.toUpperCase())} placeholder="VL-LG-001" className="font-mono" />
                   </Field>
                 </div>
                 <Field label="Short description" hint="Shown under the price on the product page.">

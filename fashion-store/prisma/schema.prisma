@@ -1,4 +1,4 @@
-// NORDFORM — premium fashion / activewear store
+// VELLA — premium fashion / activewear store
 // Money is stored in minor units (kopiyky / cents) as Int to avoid float errors.
 
 generator client {
@@ -488,7 +488,7 @@ model Promotion {
 /// Singleton row with id = "default"
 model Settings {
   id                    String   @id @default("default")
-  storeName             String   @default("NORDFORM")
+  storeName             String   @default("VELLA")
   tagline               String?
   accentColor           String   @default("#1f1f1f")
   currency              String   @default("UAH")

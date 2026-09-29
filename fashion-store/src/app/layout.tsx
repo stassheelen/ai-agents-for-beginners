@@ -8,7 +8,7 @@ const display = Inter_Tight({ variable: "--font-display", subsets: ["latin", "cy
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: { default: "NORDFORM", template: "%s — NORDFORM" },
+  title: { default: "VELLA", template: "%s — VELLA" },
   description: "Premium activewear & essentials",
 };
 

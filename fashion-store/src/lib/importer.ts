@@ -538,8 +538,8 @@ export async function commitImport(rows: ParsedRow[]): Promise<ImportResult> {
 export function templateRows(): string[][] {
   return [
     [...IMPORT_COLUMNS],
-    ["NF-TEST-001-BLK-S", "NF-TEST-001", "Studio Rib Leggings", "Clothing", "Leggings", "Essentials", "Black", "#1c1c1c", "S", "2190", "2590", "700", "15", "High-rise rib leggings.", "Rib leggings", "https://example.com/images/leggings-black.jpg", "Published", "leggings, rib", "76% polyamide, 24% elastane", "Wash at 30°C", "NORDFORM", "", "", "no", "yes", "no"],
-    ["NF-TEST-001-BLK-M", "NF-TEST-001", "Studio Rib Leggings", "Clothing", "Leggings", "Essentials", "Black", "#1c1c1c", "M", "2190", "2590", "700", "21", "", "", "", "Published", "", "", "", "", "", "", "", "", ""],
-    ["NF-TEST-001-WHT-S", "NF-TEST-001", "Studio Rib Leggings", "Clothing", "Leggings", "Essentials", "White", "#f4f2ee", "S", "2190", "2590", "700", "8", "", "", "", "Published", "", "", "", "", "", "", "", "", ""],
+    ["VL-TEST-001-BLK-S", "VL-TEST-001", "Studio Rib Leggings", "Clothing", "Leggings", "Essentials", "Black", "#1c1c1c", "S", "2190", "2590", "700", "15", "High-rise rib leggings.", "Rib leggings", "https://example.com/images/leggings-black.jpg", "Published", "leggings, rib", "76% polyamide, 24% elastane", "Wash at 30°C", "VELLA", "", "", "no", "yes", "no"],
+    ["VL-TEST-001-BLK-M", "VL-TEST-001", "Studio Rib Leggings", "Clothing", "Leggings", "Essentials", "Black", "#1c1c1c", "M", "2190", "2590", "700", "21", "", "", "", "Published", "", "", "", "", "", "", "", "", ""],
+    ["VL-TEST-001-WHT-S", "VL-TEST-001", "Studio Rib Leggings", "Clothing", "Leggings", "Essentials", "White", "#f4f2ee", "S", "2190", "2590", "700", "8", "", "", "", "Published", "", "", "", "", "", "", "", "", ""],
   ];
 }

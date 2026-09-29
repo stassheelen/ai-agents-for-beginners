@@ -77,7 +77,7 @@ export function AdminShell({ admin, directUpload, children }: { admin: { email: 
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-border bg-white lg:flex">
         <div className="flex h-14 items-center border-b border-border px-5">
           <Link href="/admin" className="font-display text-sm font-semibold tracking-[0.28em]">
-            NORDFORM
+            VELLA
           </Link>
           <span className="ml-2 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">admin</span>
         </div>
@@ -102,7 +102,7 @@ export function AdminShell({ admin, directUpload, children }: { admin: { email: 
         <button onClick={() => setOpen(true)} aria-label="Menu" className="-ml-2 p-2">
           <Menu className="size-5" />
         </button>
-        <span className="font-display text-sm font-semibold tracking-[0.28em]">NORDFORM</span>
+        <span className="font-display text-sm font-semibold tracking-[0.28em]">VELLA</span>
         <Link href="/" target="_blank" aria-label="View store" className="p-2">
           <ExternalLink className="size-4" />
         </Link>
@@ -112,7 +112,7 @@ export function AdminShell({ admin, directUpload, children }: { admin: { email: 
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
           <div className="absolute inset-y-0 left-0 flex w-64 flex-col overflow-y-auto bg-white animate-slide-in-left">
             <div className="flex h-14 items-center justify-between border-b border-border px-5">
-              <span className="font-display text-sm font-semibold tracking-[0.28em]">NORDFORM</span>
+              <span className="font-display text-sm font-semibold tracking-[0.28em]">VELLA</span>
               <button onClick={() => setOpen(false)} aria-label="Close">
                 <X className="size-5" />
               </button>

@@ -1,4 +1,4 @@
-# NORDFORM — premium fashion / activewear e-commerce
+# VELLA — premium fashion / activewear e-commerce
 
 A working e-commerce store built with Next.js (App Router) + PostgreSQL + Prisma, with a full admin panel. Every piece of content (products, categories, collections, homepage, banners, orders, settings) lives in the database, and the admin panel manages all of it.
 
@@ -83,7 +83,7 @@ npm run dev
 
 Postgres via Docker (optional):
 ```bash
-docker run -d --name nordform-db -e POSTGRES_USER=store -e POSTGRES_PASSWORD=store -e POSTGRES_DB=fashion_store -p 5432:5432 postgres:16
+docker run -d --name vella-db -e POSTGRES_USER=store -e POSTGRES_PASSWORD=store -e POSTGRES_DB=fashion_store -p 5432:5432 postgres:16
 # DATABASE_URL="postgresql://store:store@localhost:5432/fashion_store?schema=public"
 ```
 
@@ -104,7 +104,7 @@ Useful commands:
 ## Deploying to Vercel (GitHub → Vercel → Production)
 
 1. **Push the repository to GitHub.** The project lives in the `fashion-store/` folder, so in Vercel set **Root Directory = `fashion-store`**. If you move the project into its own repository, leave Root Directory empty.
-2. **Vercel → Add New Project → Import** the repository. The framework is detected as Next.js. `vercel.json` already sets `buildCommand: npm run vercel-build`, which runs `prisma generate && prisma migrate deploy && next build`, so migrations apply automatically on every deploy.
+2. **Vercel → Add New Project → Import** the repository. The framework is detected as Next.js. `vercel.json` already sets `buildCommand: npm run vercel-build`, which runs `prisma generate && prisma migrate deploy && prisma db seed && next build`, so migrations apply automatically on every deploy.
 3. **Database:** Storage → *Neon Postgres* (or any Postgres). Vercel adds `DATABASE_URL` for you. If the variable has a different name, add `DATABASE_URL` manually with the pooled connection string.
 4. **Blob:** Storage → *Blob* → Connect to project. This adds `BLOB_READ_WRITE_TOKEN`.
 5. **Environment Variables** (Production + Preview):
@@ -113,11 +113,7 @@ Useful commands:
    - `ADMIN_EMAIL`, `ADMIN_PASSWORD`
    - optional: `NOVA_POSHTA_API_KEY`, `LIQPAY_PUBLIC_KEY`, `LIQPAY_PRIVATE_KEY`
 6. **Deploy.**
-7. **Seed the production database once**, from your machine:
-   ```bash
-   DATABASE_URL="<production connection string>" ADMIN_EMAIL="you@brand.com" ADMIN_PASSWORD="a-strong-password" npm run db:seed
-   ```
-   To create only the admin account without demo data, run the seed on an empty DB and then delete the demo products in the admin panel. Alternatively, import your own catalog via CSV right away.
+7. **Data seeding on deploy.** `vercel-build` runs `prisma db seed` automatically on every deploy. It creates or updates the admin account from `ADMIN_EMAIL` / `ADMIN_PASSWORD`, and it loads the demo catalog **only** when `SEED_DEMO=1` is set and the database has no products. For the first deploy, set `SEED_DEMO=1`; afterwards change it to `0`.
 
 The build does **not** need database access for page generation (all pages render on demand and cache their data), so the first deploy works even before seeding.
 

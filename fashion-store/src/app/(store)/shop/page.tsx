@@ -8,7 +8,7 @@ export async function generateMetadata(props: PageProps<"/shop">): Promise<Metad
   const flag = typeof sp.flag === "string" ? FLAG_TITLES[sp.flag] : undefined;
   return {
     title: flag ?? "Усі товари",
-    description: "Каталог NORDFORM: activewear, худі, світшоти, легінси та аксесуари.",
+    description: "Каталог VELLA: activewear, худі, світшоти, легінси та аксесуари.",
     alternates: { canonical: flag ? `/shop?flag=${sp.flag}` : "/shop" },
   };
 }

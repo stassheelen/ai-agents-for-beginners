@@ -17,7 +17,7 @@ export default async function LoginPage(props: PageProps<"/admin/login">) {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-soft p-4">
       <div className="w-full max-w-sm border border-border bg-white p-8">
-        <p className="font-display text-lg font-semibold tracking-[0.28em]">NORDFORM</p>
+        <p className="font-display text-lg font-semibold tracking-[0.28em]">VELLA</p>
         <p className="mt-1 text-xs uppercase tracking-[0.14em] text-muted-foreground">Admin</p>
         <LoginForm callbackUrl={path} />
       </div>
