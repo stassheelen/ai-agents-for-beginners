@@ -1,0 +1,122 @@
+import Link from "next/link";
+import Image from "next/image";
+import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+import { prisma } from "@/lib/db";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/misc";
+import { OrderEditor } from "@/components/admin/order-editor";
+import { OrderStatusBadge, PaymentBadge } from "@/components/admin/status";
+import { DELIVERY_METHODS } from "@/lib/providers/delivery";
+import { formatDate, formatMoney } from "@/lib/utils";
+
+export const metadata = { title: "Order" };
+
+export default async function OrderPage(props: PageProps<"/admin/orders/[id]">) {
+  const { id } = await props.params;
+  const o = await prisma.order.findUnique({ where: { id }, include: { items: true, customer: { select: { id: true, ordersCount: true } } } });
+  if (!o) notFound();
+  return (
+    <>
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <Link href="/admin/orders" className="p-1.5 hover:bg-muted" aria-label="Back">
+          <ArrowLeft className="size-4" />
+        </Link>
+        <h1 className="font-display text-2xl font-medium">Order #{o.number}</h1>
+        <OrderStatusBadge status={o.status} />
+        <PaymentBadge status={o.paymentStatus} />
+        <span className="text-muted-foreground">{formatDate(o.createdAt, true)}</span>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Products</CardTitle>
+            </CardHeader>
+            <ul className="divide-y divide-border">
+              {o.items.map((i) => (
+                <li key={i.id} className="flex items-center gap-4 px-5 py-3">
+                  <div className="relative size-14 shrink-0 bg-muted">{i.image && <Image src={i.image} alt="" fill sizes="56px" className="object-cover" />}</div>
+                  <div className="min-w-0 flex-1">
+                    {i.productId ? (
+                      <Link href={`/admin/products/${i.productId}`} className="font-medium hover:underline">
+                        {i.name}
+                      </Link>
+                    ) : (
+                      <p className="font-medium">{i.name}</p>
+                    )}
+                    <p className="text-[11px] text-muted-foreground">
+                      {i.sku} · {[i.color, i.size].filter(Boolean).join(" / ")}
+                    </p>
+                  </div>
+                  <p className="w-28 text-right text-muted-foreground">
+                    {formatMoney(i.unitPrice, o.currency)} × {i.quantity}
+                  </p>
+                  <p className="w-24 text-right font-medium">{formatMoney(i.total, o.currency)}</p>
+                </li>
+              ))}
+            </ul>
+            <dl className="space-y-1.5 border-t border-border bg-soft px-5 py-4">
+              <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd>{formatMoney(o.subtotal, o.currency)}</dd></div>
+              {o.discount > 0 && <div className="flex justify-between"><dt className="text-muted-foreground">Discount {o.promotionCode && `(${o.promotionCode})`}</dt><dd>−{formatMoney(o.discount, o.currency)}</dd></div>}
+              <div className="flex justify-between"><dt className="text-muted-foreground">Delivery</dt><dd>{o.shippingCost ? formatMoney(o.shippingCost, o.currency) : "Free"}</dd></div>
+              <div className="flex justify-between border-t border-border pt-2 text-sm font-medium"><dt>Total</dt><dd>{formatMoney(o.total, o.currency)}</dd></div>
+            </dl>
+          </Card>
+          <OrderEditor order={{ id: o.id, status: o.status, paymentStatus: o.paymentStatus, trackingNumber: o.trackingNumber ?? "", adminNote: o.adminNote ?? "" }} />
+        </div>
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer</CardTitle>
+              {o.customer && (
+                <Link href={`/admin/customers/${o.customer.id}`} className="text-xs underline">
+                  {o.customer.ordersCount} orders
+                </Link>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-1">
+              <p className="font-medium">
+                {o.firstName} {o.lastName}
+              </p>
+              <p>
+                <a href={`mailto:${o.email}`} className="hover:underline">{o.email}</a>
+              </p>
+              <p>
+                <a href={`tel:${o.phone}`} className="hover:underline">{o.phone}</a>
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Delivery</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              <p>{DELIVERY_METHODS.find((d) => d.id === o.deliveryMethod)?.label ?? o.deliveryMethod}</p>
+              <p className="text-muted-foreground">{o.city}</p>
+              <p className="text-muted-foreground">{o.deliveryAddress}</p>
+              {o.trackingNumber && <p className="pt-2">TTN: <strong>{o.trackingNumber}</strong></p>}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              <p>{o.paymentMethod === "cod" ? "Cash on delivery" : "Card"}</p>
+              <p className="text-muted-foreground">Provider: {o.paymentProvider}</p>
+              {o.paymentRef && <p className="text-muted-foreground">Ref: {o.paymentRef}</p>}
+            </CardContent>
+          </Card>
+          {o.comment && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Customer comment</CardTitle>
+              </CardHeader>
+              <CardContent className="whitespace-pre-line">{o.comment}</CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
