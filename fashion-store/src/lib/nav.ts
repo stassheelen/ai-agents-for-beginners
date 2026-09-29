@@ -9,9 +9,15 @@ export type NavItem = { label: string; href: string; columns: NavColumn[]; promo
 export async function buildNav(): Promise<{ items: NavItem[]; announcements: { id: string; title: string; link: string | null }[] }> {
   const nav = await getNavigation();
   const promos = nav.megaBanners.slice(0, 2);
+  // Keep the menu compact: one entry per colour name, first few only, then a link to the full catalog filter.
+  const MAX_COLORS = 8;
+  const uniqueColors = nav.colors.filter((c, i, all) => all.findIndex((o) => o.name.trim().toLowerCase() === c.name.trim().toLowerCase()) === i);
   const colorCol = (base: string): NavColumn => ({
     title: "Кольори",
-    links: nav.colors.map((c) => ({ label: c.name, href: `${base}${base.includes("?") ? "&" : "?"}color=${c.slug}`, swatch: c.hex })),
+    links: [
+      ...uniqueColors.slice(0, MAX_COLORS).map((c) => ({ label: c.name, href: `${base}${base.includes("?") ? "&" : "?"}color=${c.slug}`, swatch: c.hex })),
+      ...(uniqueColors.length > MAX_COLORS ? [{ label: "Усі кольори →", href: base }] : []),
+    ],
   });
   const clothing = nav.categories.find((c) => c.slug === "clothing");
 

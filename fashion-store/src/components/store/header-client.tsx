@@ -144,16 +144,16 @@ export function HeaderClient({ items, storeName }: { items: NavItem[]; storeName
       {/* Mega menu */}
       {activeItem && (
         <div
-          className="absolute inset-x-0 top-full hidden border-b border-border bg-white animate-fade-in lg:block"
+          className="absolute inset-x-0 top-full hidden max-h-[calc(100dvh-8rem)] overflow-y-auto border-b border-border bg-white shadow-[0_24px_40px_-32px_rgba(0,0,0,0.35)] animate-fade-in lg:block"
           onMouseEnter={() => closeTimer.current && clearTimeout(closeTimer.current)}
           onMouseLeave={scheduleClose}
         >
-          <div className="container-page grid grid-cols-12 gap-10 py-10">
-            <div className="col-span-7 grid grid-cols-3 gap-10">
+          <div className="container-page grid grid-cols-12 gap-10 py-8">
+            <div className="col-span-8 grid grid-cols-3 gap-10">
               {activeItem.columns.map((col) => (
                 <div key={col.title}>
-                  <p className="eyebrow mb-4 text-muted-foreground">{col.title}</p>
-                  <ul className="space-y-2.5">
+                  <p className="eyebrow mb-3 text-muted-foreground">{col.title}</p>
+                  <ul className="space-y-2">
                     {col.links.map((l) => (
                       <li key={l.href + l.label}>
                         <Link href={l.href} className="group inline-flex items-center gap-2.5 text-sm hover:underline hover:underline-offset-4">
@@ -166,15 +166,15 @@ export function HeaderClient({ items, storeName }: { items: NavItem[]; storeName
                 </div>
               ))}
             </div>
-            <div className="col-span-5 grid grid-cols-2 gap-4">
+            <div className="col-span-4 grid grid-cols-2 gap-4">
               {activeItem.promos.map((p) => (
-                <Link key={p.id} href={p.link ?? "/shop"} className="group block">
-                  <div className="relative aspect-[4/5] overflow-hidden bg-muted">
+                <Link key={p.id} href={p.link ?? "/shop"} className={cn("group block", activeItem.promos.length === 1 && "col-span-2 max-w-72 justify-self-end")}>
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-[4px] bg-muted">
                     {p.image && (
                       <Image src={p.image} alt={p.title} fill sizes="20vw" className="object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
                     )}
                   </div>
-                  <p className="mt-3 text-sm font-medium">{p.title}</p>
+                  <p className="mt-2.5 text-sm font-medium">{p.title}</p>
                   {p.subtitle && <p className="text-xs text-muted-foreground">{p.subtitle}</p>}
                 </Link>
               ))}
