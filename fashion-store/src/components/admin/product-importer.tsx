@@ -35,7 +35,8 @@ type Result = {
 const ACTION_LABELS = { all: "Усі", create: "Створення", update: "Оновлення", duplicate: "Дублікат", error: "Помилка" } as const;
 
 function downloadCsv(name: string, rows: (string | number)[][]) {
-  const blob = new Blob(["﻿" + Papa.unparse(rows)], { type: "text/csv;charset=utf-8" });
+  // ";" so Excel with a Ukrainian locale splits the columns on open.
+  const blob = new Blob(["﻿" + Papa.unparse(rows, { delimiter: ";" })], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

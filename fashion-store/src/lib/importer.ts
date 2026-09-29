@@ -261,6 +261,47 @@ function splitImages(v?: string) {
 
 const groupKeyOf = (d: Partial<Record<Field, string>>) => (d.parentSku ? `sku:${d.parentSku.toUpperCase()}` : `name:${slugify(d.name ?? "")}`);
 
+const comboOf = (d: Partial<Record<Field, string>>) => `${(d.color ?? "").trim().toLowerCase()}|${(d.size ?? "").trim().toUpperCase()}`;
+const skuPrefix = (sku: string) => {
+  const i = Math.max(sku.lastIndexOf("-"), sku.lastIndexOf("_"), sku.lastIndexOf("/"), sku.lastIndexOf("."));
+  return i > 0 ? sku.slice(0, i).toUpperCase() : "";
+};
+
+/**
+ * Product group for every row. Rows with a parent SKU group by it. Rows without one group by name, but different
+ * models often share a name ("Худі oversize" in several fabrics): when the same colour + size appears twice under one
+ * name, the rows are split by SKU prefix (133470-431447 → 133470), and failing that, into as many products as needed.
+ */
+function assignGroupKeys(rows: ParsedRow[]): Map<number, string> {
+  const keys = new Map<number, string>();
+  const byName = new Map<string, ParsedRow[]>();
+  for (const r of rows) {
+    const k = groupKeyOf(r.data);
+    keys.set(r.row, k);
+    if (!r.data.parentSku && r.data.sku) byName.set(k, [...(byName.get(k) ?? []), r]);
+  }
+  const clashes = (list: ParsedRow[]) => new Set(list.map((r) => comboOf(r.data))).size < list.length;
+  for (const [nameKey, list] of byName) {
+    if (!clashes(list)) continue;
+    const byPrefix = new Map<string, ParsedRow[]>();
+    for (const r of list) byPrefix.set(skuPrefix(r.data.sku!), [...(byPrefix.get(skuPrefix(r.data.sku!)) ?? []), r]);
+    if (!byPrefix.has("") && [...byPrefix.values()].every((l) => !clashes(l))) {
+      for (const [prefix, l] of byPrefix) for (const r of l) keys.set(r.row, `${nameKey}|${prefix}`);
+      continue;
+    }
+    // Fallback: put each row into the first product that does not have its colour + size yet.
+    const buckets: Set<string>[] = [];
+    for (const r of list) {
+      const combo = comboOf(r.data);
+      let i = buckets.findIndex((b) => !b.has(combo));
+      if (i < 0) i = buckets.push(new Set()) - 1;
+      buckets[i].add(combo);
+      keys.set(r.row, i === 0 ? nameKey : `${nameKey}|${i + 1}`);
+    }
+  }
+  return keys;
+}
+
 export async function planImport(rows: ParsedRow[], unknownColumns: string[] = []): Promise<ImportPreview> {
   const skus = rows.map((r) => r.data.sku?.toUpperCase()).filter((s): s is string => Boolean(s));
   const parentSkus = rows.map((r) => r.data.parentSku?.toUpperCase()).filter((s): s is string => Boolean(s));
@@ -276,10 +317,11 @@ export async function planImport(rows: ParsedRow[], unknownColumns: string[] = [
   const plans: RowPlan[] = [];
   let newVariants = 0;
   let updatedVariants = 0;
+  const groupKeys = assignGroupKeys(rows.filter((r) => !rowError(r.data)));
 
   for (const r of rows) {
     const d = r.data;
-    const groupKey = groupKeyOf(d);
+    const groupKey = groupKeys.get(r.row) ?? groupKeyOf(d);
     const base = { row: r.row, sku: d.sku ?? "", name: d.name ?? "", color: d.color ?? "", size: d.size ?? "", price: d.price ?? "", stock: d.stock ?? "", groupKey };
     const err = rowError(d);
     if (err) {
@@ -380,10 +422,13 @@ async function findOrCreateColor(name: string, hex: string | undefined, cache: M
 /** `reserved` holds slugs taken earlier in this import, so parallel creates never pick the same one. */
 async function uniqueProductSlug(name: string, reserved: Set<string>) {
   const base = slugify(name) || "product";
-  let slug = base;
-  for (let i = 2; reserved.has(slug) || (await prisma.product.findUnique({ where: { slug }, select: { id: true } })); i++) slug = `${base}-${i}`;
-  reserved.add(slug);
-  return slug;
+  for (let i = 1; ; i++) {
+    const slug = i === 1 ? base : `${base}-${i}`;
+    if (reserved.has(slug)) continue;
+    // Reserve before awaiting so a parallel create for the same name moves on to the next candidate.
+    reserved.add(slug);
+    if (!(await prisma.product.findUnique({ where: { slug }, select: { id: true } }))) return slug;
+  }
 }
 
 /** Runs `fn` over `items` with at most `limit` in flight. */
@@ -574,17 +619,25 @@ export async function commitImport(rows: ParsedRow[], opts: { chunk?: number } =
             const price = toMinor(d.price)!;
             const stock = d.stock ? Math.max(0, parseInt(d.stock.replace(/\s/g, ""), 10)) : undefined;
             const existing = existingVariants.find((v) => v.sku.toLowerCase() === d.sku!.toLowerCase());
+            const size = d.size ? d.size.toUpperCase() : null;
+            // Same colour + size under another SKU: keep the row, drop the colour link and flag it for manual editing.
+            const clash = colorId && size ? await tx.productVariant.findFirst({ where: { productId: product.id, colorId, size, ...(existing ? { id: { not: existing.id } } : {}) }, select: { sku: true } }) : null;
+            const linkColor = !clash;
+            if (clash) {
+              result.warnings.push({
+                row: r.row,
+                sku: d.sku!,
+                warning: `Варіант ${[d.color, d.size].filter(Boolean).join(" / ")} уже є (артикул ${clash.sku}) — рядок імпортовано без кольору, відредагуйте товар вручну`,
+              });
+            }
             if (existing) {
               await tx.productVariant.update({
                 where: { id: existing.id },
-                data: { productId: product.id, ...(d.color ? { colorId } : {}), ...(d.size ? { size: d.size.toUpperCase() } : {}), ...(stock !== undefined ? { stock } : {}), price: price !== basePrice ? price : null },
+                data: { productId: product.id, ...(d.color ? { colorId: linkColor ? colorId : null } : {}), ...(d.size ? { size } : {}), ...(stock !== undefined ? { stock } : {}), price: price !== basePrice ? price : null },
               });
             } else {
-              // A variant with the same color/size may already exist under another SKU
-              const clash = await tx.productVariant.findFirst({ where: { productId: product.id, colorId, size: d.size ? d.size.toUpperCase() : null } });
-              if (clash) throw new Error(`Рядок ${r.row}: у товару вже є варіант ${[d.color, d.size].filter(Boolean).join(" / ")} (артикул ${clash.sku})`);
               await tx.productVariant.create({
-                data: { productId: product.id, sku: d.sku!, colorId, size: d.size ? d.size.toUpperCase() : null, stock: stock ?? 0, price: price !== basePrice ? price : null, position: idx },
+                data: { productId: product.id, sku: d.sku!, colorId: linkColor ? colorId : null, size, stock: stock ?? 0, price: price !== basePrice ? price : null, position: idx },
               });
             }
           }
