@@ -20,7 +20,17 @@ type Preview = {
   unknownColumns: string[];
   rows: { row: number; sku: string; name: string; color: string; size: string; price: string; stock: string; action: "create" | "update" | "duplicate" | "error"; message?: string }[];
 };
-type Result = { created: number; updated: number; skipped: number; errors: number; errorRows: { row: number; sku: string; error: string }[]; warnings: { row: number; sku: string; warning: string }[] };
+type Result = {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+  errorRows: { row: number; sku: string; error: string }[];
+  warnings: { row: number; sku: string; warning: string }[];
+  totalGroups?: number;
+  processedGroups?: number;
+  done?: boolean;
+};
 
 const ACTION_LABELS = { all: "Усі", create: "Створення", update: "Оновлення", duplicate: "Дублікат", error: "Помилка" } as const;
 
@@ -41,12 +51,14 @@ export function ProductImporter({ columns }: { columns: string[] }) {
   const [busy, setBusy] = React.useState<null | "preview" | "commit">(null);
   const [filter, setFilter] = React.useState<"all" | "create" | "update" | "duplicate" | "error">("all");
   const [over, setOver] = React.useState(false);
+  const [progress, setProgress] = React.useState<{ done: number; total: number } | null>(null);
   const input = React.useRef<HTMLInputElement>(null);
 
-  const send = async (f: File, mode: "preview" | "commit") => {
+  const send = async (f: File, mode: "preview" | "commit", chunk?: number) => {
     const fd = new FormData();
     fd.append("file", f);
     fd.append("mode", mode);
+    if (chunk !== undefined) fd.append("chunk", String(chunk));
     const res = await fetch("/api/admin/import", { method: "POST", body: fd });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error ?? "Помилка запиту");
@@ -74,15 +86,34 @@ export function ProductImporter({ columns }: { columns: string[] }) {
   const confirmImport = async () => {
     if (!file) return;
     setBusy("commit");
+    setProgress({ done: 0, total: preview?.newProducts !== undefined ? preview.newProducts + preview.updatedProducts : 0 });
+    // Commit in chunks so big files never hit the server time limit and progress stays visible.
+    const total: Result = { created: 0, updated: 0, skipped: 0, errors: 0, errorRows: [], warnings: [] };
     try {
-      const json = await send(file, "commit");
-      setResult(json.result);
+      for (let chunk = 0; ; chunk++) {
+        const r: Result = (await send(file, "commit", chunk)).result;
+        total.created += r.created;
+        total.updated += r.updated;
+        total.skipped += r.skipped;
+        total.errors += r.errors;
+        total.errorRows.push(...r.errorRows);
+        total.warnings.push(...r.warnings);
+        setProgress({ done: r.processedGroups ?? 0, total: r.totalGroups ?? 0 });
+        if (r.done !== false) break;
+      }
+      setResult(total);
       setPreview(null);
       toast.success("Імпорт завершено");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Помилка імпорту");
+      // Chunks already written stay imported; show what was done so far.
+      if (total.created || total.updated) {
+        setResult(total);
+        setPreview(null);
+      }
+      toast.error(`${e instanceof Error ? e.message : "Помилка імпорту"}. Оброблене раніше збережено — можна завантажити файл ще раз, наявні артикули оновляться.`);
     } finally {
       setBusy(null);
+      setProgress(null);
     }
   };
 
@@ -180,7 +211,24 @@ export function ProductImporter({ columns }: { columns: string[] }) {
                   <AlertTriangle className="size-4" /> Невідомі колонки (пропущено): {preview.unknownColumns.join(", ")}
                 </p>
               )}
-              {busy === "commit" && <p className="mt-4 text-xs text-muted-foreground">Імпортуємо… завантаження фото для великих файлів може тривати кілька хвилин. Не закривайте вкладку.</p>}
+              {busy === "commit" && (
+                <div className="mt-4 max-w-md" role="status" aria-live="polite">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Імпортуємо… Не закривайте вкладку.</span>
+                    {progress && progress.total > 0 && (
+                      <span className="tabular-nums">
+                        {progress.done} / {progress.total} товарів
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden bg-muted">
+                    <div
+                      className="h-full bg-foreground transition-[width] duration-500"
+                      style={{ width: progress && progress.total ? `${Math.max(3, (progress.done / progress.total) * 100)}%` : "3%" }}
+                    />
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
           <Card>

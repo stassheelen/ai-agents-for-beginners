@@ -166,6 +166,10 @@ export type ImportResult = {
   errors: number;
   errorRows: { row: number; sku: string; error: string }[];
   warnings: { row: number; sku: string; warning: string }[];
+  /** Chunked commits: product groups in the whole file / done after this chunk. */
+  totalGroups?: number;
+  processedGroups?: number;
+  done?: boolean;
 };
 
 // ───────────────────────────── Parsing ─────────────────────────────
@@ -373,31 +377,56 @@ async function findOrCreateColor(name: string, hex: string | undefined, cache: M
   return id;
 }
 
-async function uniqueProductSlug(name: string) {
+/** `reserved` holds slugs taken earlier in this import, so parallel creates never pick the same one. */
+async function uniqueProductSlug(name: string, reserved: Set<string>) {
   const base = slugify(name) || "product";
   let slug = base;
-  for (let i = 2; await prisma.product.findUnique({ where: { slug }, select: { id: true } }); i++) slug = `${base}-${i}`;
+  for (let i = 2; reserved.has(slug) || (await prisma.product.findUnique({ where: { slug }, select: { id: true } })); i++) slug = `${base}-${i}`;
+  reserved.add(slug);
   return slug;
 }
 
-async function resolveImages(urls: string[], alt: string, warn: (w: string) => void) {
-  const out: string[] = [];
-  for (const url of urls) {
-    if (url.startsWith("/")) {
-      out.push(url);
-      continue;
-    }
-    try {
-      const m = await importRemoteFile(url, alt);
-      out.push(m.url);
-    } catch (e) {
-      warn(`Фото не імпортовано (${url}): ${e instanceof Error ? e.message : "помилка"}`);
-    }
-  }
-  return out;
+/** Runs `fn` over `items` with at most `limit` in flight. */
+async function eachLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>) {
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) await fn(items[next++]);
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
 }
 
-export async function commitImport(rows: ParsedRow[]): Promise<ImportResult> {
+const IMAGE_CONCURRENCY = 6;
+const GROUP_CONCURRENCY = 3;
+/** Product groups per chunked request: small enough to finish well inside the function time limit. */
+export const IMPORT_CHUNK_SIZE = 25;
+
+/** Downloads every distinct remote image once, in parallel. Returns url → stored url (missing when it failed). */
+async function prefetchImages(groupRows: ParsedRow[][], warn: (row: ParsedRow, w: string) => void) {
+  const stored = new Map<string, string>();
+  const jobs = new Map<string, { url: string; alt: string; row: ParsedRow }>();
+  for (const rows of groupRows) {
+    for (const r of rows) {
+      for (const url of splitImages(r.data.images)) {
+        if (url.startsWith("/")) stored.set(url, url);
+        else if (!jobs.has(url)) jobs.set(url, { url, alt: rows[0].data.name ?? "", row: r });
+      }
+    }
+  }
+  await eachLimit([...jobs.values()], IMAGE_CONCURRENCY, async (job) => {
+    try {
+      stored.set(job.url, (await importRemoteFile(job.url, job.alt)).url);
+    } catch (e) {
+      warn(job.row, `Фото не імпортовано (${job.url}): ${e instanceof Error ? e.message : "помилка"}`);
+    }
+  });
+  return stored;
+}
+
+/**
+ * Imports the file. With `chunk` set, only that slice of product groups is written (IMPORT_CHUNK_SIZE per chunk)
+ * so a large file is committed over several short requests; row errors and duplicates are reported with chunk 0.
+ */
+export async function commitImport(rows: ParsedRow[], opts: { chunk?: number } = {}): Promise<ImportResult> {
   const plan = await planImport(rows);
   const result: ImportResult = { created: 0, updated: 0, skipped: 0, errors: 0, errorRows: [], warnings: [] };
   const planByRow = new Map(plan.rows.map((p) => [p.row, p]));
@@ -424,7 +453,39 @@ export async function commitImport(rows: ParsedRow[]): Promise<ImportResult> {
     groups.set(p.groupKey, list);
   }
 
-  for (const [, groupRows] of groups) {
+  const allGroups = [...groups.values()];
+  const chunked = opts.chunk !== undefined;
+  const from = chunked ? opts.chunk! * IMPORT_CHUNK_SIZE : 0;
+  const batch = chunked ? allGroups.slice(from, from + IMPORT_CHUNK_SIZE) : allGroups;
+  if (chunked && opts.chunk! > 0) {
+    // Row-level problems were already reported with the first chunk.
+    result.errors = result.skipped = 0;
+    result.errorRows = [];
+  }
+  result.totalGroups = allGroups.length;
+  result.processedGroups = Math.min(allGroups.length, from + batch.length);
+  result.done = result.processedGroups >= allGroups.length;
+
+  // Images first: every distinct URL downloaded once, several at a time.
+  const images = await prefetchImages(batch, (r, w) => result.warnings.push({ row: r.row, sku: r.data.sku ?? "", warning: w }));
+
+  // Categories, collections and colours are shared between products: resolve them one by one before the parallel part.
+  for (const groupRows of batch) {
+    const pick = (f: Field) => groupRows.map((r) => r.data[f]).find((v) => v) || undefined;
+    try {
+      const categoryId = pick("category") ? await findOrCreateCategory(pick("category")!, null, catCache) : undefined;
+      if (pick("subcategory") && categoryId) await findOrCreateCategory(pick("subcategory")!, categoryId, catCache);
+      for (const r of groupRows) {
+        for (const n of (r.data.collection ?? "").split(/[,;|]/).map((x) => x.trim()).filter(Boolean)) await findOrCreateCollection(n, colCache);
+        if (r.data.color) await findOrCreateColor(r.data.color, r.data.colorHex, colorCache);
+      }
+    } catch {
+      // Reported per product below.
+    }
+  }
+
+  const reservedSlugs = new Set<string>();
+  await eachLimit(batch, GROUP_CONCURRENCY, async (groupRows) => {
     const first = groupRows[0].data;
     try {
       // Locate existing product
@@ -446,13 +507,12 @@ export async function commitImport(rows: ParsedRow[]): Promise<ImportResult> {
       const collectionNames = [...new Set(groupRows.flatMap((r) => (r.data.collection ?? "").split(/[,;|]/).map((s) => s.trim()).filter(Boolean)))];
       const collectionIds = await Promise.all(collectionNames.map((n) => findOrCreateCollection(n, colCache)));
 
-      const warn = (w: string) => result.warnings.push({ row: groupRows[0].row, sku: first.sku!, warning: w });
       const imageRows: { url: string; colorName: string | null }[] = [];
       for (const r of groupRows) {
-        const urls = splitImages(r.data.images);
-        if (!urls.length) continue;
-        const stored = await resolveImages(urls, first.name!, warn);
-        for (const u of stored) if (!imageRows.some((x) => x.url === u)) imageRows.push({ url: u, colorName: r.data.color || null });
+        for (const url of splitImages(r.data.images)) {
+          const u = images.get(url);
+          if (u && !imageRows.some((x) => x.url === u)) imageRows.push({ url: u, colorName: r.data.color || null });
+        }
       }
 
       const status = statusOf(pick("status"));
@@ -486,7 +546,7 @@ export async function commitImport(rows: ParsedRow[]): Promise<ImportResult> {
                 data: {
                   ...(common as Prisma.ProductUncheckedCreateInput),
                   sku: productSku,
-                  slug: await uniqueProductSlug(first.name!),
+                  slug: await uniqueProductSlug(first.name!, reservedSlugs),
                   status: status ?? "DRAFT",
                   publishedAt: status === "PUBLISHED" ? new Date() : null,
                   isNew: bool(pick("isNew")) ?? true,
@@ -507,12 +567,13 @@ export async function commitImport(rows: ParsedRow[]): Promise<ImportResult> {
           }
 
           // variants
+          const existingVariants = await tx.productVariant.findMany({ where: { sku: { in: variantSkus, mode: "insensitive" } } });
           for (const [idx, r] of groupRows.entries()) {
             const d = r.data;
             const colorId = d.color ? await findOrCreateColor(d.color, d.colorHex, colorCache) : null;
             const price = toMinor(d.price)!;
             const stock = d.stock ? Math.max(0, parseInt(d.stock.replace(/\s/g, ""), 10)) : undefined;
-            const existing = await tx.productVariant.findFirst({ where: { sku: { equals: d.sku!, mode: "insensitive" } } });
+            const existing = existingVariants.find((v) => v.sku.toLowerCase() === d.sku!.toLowerCase());
             if (existing) {
               await tx.productVariant.update({
                 where: { id: existing.id },
@@ -530,7 +591,7 @@ export async function commitImport(rows: ParsedRow[]): Promise<ImportResult> {
           // keep base price consistent when overrides equal base
           await tx.productVariant.updateMany({ where: { productId: product.id, price: basePrice }, data: { price: null } });
         },
-        { timeout: 60000 },
+        { timeout: 60000, maxWait: 30000 },
       );
       if (existingProduct) result.updated++;
       else result.created++;
@@ -541,7 +602,7 @@ export async function commitImport(rows: ParsedRow[]): Promise<ImportResult> {
         result.errorRows.push({ row: r.row, sku: r.data.sku ?? "", error: msg.includes("Unique constraint") ? "Порушення унікальності (артикул або адреса вже використовуються)" : msg });
       }
     }
-  }
+  });
   return result;
 }
 

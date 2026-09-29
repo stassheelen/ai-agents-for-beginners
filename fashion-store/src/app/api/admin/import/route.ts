@@ -11,10 +11,13 @@ export async function POST(req: Request) {
   try {
     const admin = await requireAdmin();
     await assertSameOrigin(req);
-    if (!(await rateLimit(`import:${admin.id}`, 30, 600))) return Response.json({ error: "Забагато імпортів, зачекайте кілька хвилин" }, { status: 429 });
     const form = await req.formData();
     const file = form.get("file");
     const mode = form.get("mode") === "commit" ? "commit" : "preview";
+    const chunkRaw = form.get("chunk");
+    const chunk = typeof chunkRaw === "string" && /^\d{1,5}$/.test(chunkRaw) ? Number(chunkRaw) : undefined;
+    // A chunked commit is one import: only its first request counts towards the limit.
+    if (!chunk && !(await rateLimit(`import:${admin.id}`, 30, 600))) return Response.json({ error: "Забагато імпортів, зачекайте кілька хвилин" }, { status: 429 });
     if (!(file instanceof File)) return Response.json({ error: "Файл не завантажено" }, { status: 400 });
     if (file.size > MAX_FILE) return Response.json({ error: "Файл більше 10 МБ" }, { status: 400 });
     const { rows, unknownColumns } = await parseFile(file);
@@ -22,7 +25,7 @@ export async function POST(req: Request) {
       const preview = await planImport(rows, unknownColumns);
       return Response.json({ preview: { ...preview, rows: preview.rows.slice(0, 1000) } });
     }
-    const result = await commitImport(rows);
+    const result = await commitImport(rows, { chunk });
     invalidateStore();
     return Response.json({ result });
   } catch (e) {
