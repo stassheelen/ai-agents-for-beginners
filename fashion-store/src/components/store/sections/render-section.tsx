@@ -13,10 +13,13 @@ import { ProductCard } from "../product-card";
 import { ProductRail } from "../product-rail";
 import { SectionHeading } from "./section-heading";
 import { ResponsiveImage } from "./responsive-image";
+import { RotatingImage } from "./rotating-image";
 
 type Config = {
   source?: ProductSource;
   limit?: number;
+  /** Carousel advances on its own (default for the "new" source). */
+  autoplay?: boolean;
   slug?: string;
   slugs?: string[];
   layout?: "left" | "right";
@@ -39,13 +42,15 @@ export async function RenderSection({ section, index }: { section: HomepageSecti
       return <Hero section={section} config={c} priority={index === 0} />;
     case "PRODUCT_CAROUSEL":
     case "PRODUCT_GRID": {
-      const products = await getProductsBySource(c.source ?? "latest", c.limit ?? 8, c.slug);
+      // "Новинки" carousel: 8 cards that scroll by themselves.
+      const autoplay = section.type === "PRODUCT_CAROUSEL" && (c.autoplay ?? c.source === "new");
+      const products = await getProductsBySource(c.source ?? "latest", autoplay ? 8 : (c.limit ?? 8), c.slug);
       if (!products.length) return null;
       return (
         <section className="container-page py-12 lg:py-16" style={{ background: section.background ?? undefined }}>
           <SectionHeading title={section.title} subtitle={section.subtitle} href={section.buttonLink} linkLabel={section.buttonLabel} />
           {section.type === "PRODUCT_CAROUSEL" ? (
-            <ProductRail products={products} />
+            <ProductRail products={products} autoplay={autoplay ? 3500 : undefined} />
           ) : (
             <div className="grid grid-cols-2 gap-x-3 gap-y-10 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-4">
               {products.map((p) => (
@@ -57,17 +62,23 @@ export async function RenderSection({ section, index }: { section: HomepageSecti
       );
     }
     case "CATEGORY_GRID": {
-      const tiles = await getCategoryTiles(c.slugs);
+      const found = await getCategoryTiles(c.slugs);
+      const ordered = c.slugs?.length ? c.slugs.map((s) => found.find((t) => t.slug === s)).filter((t): t is (typeof found)[number] => Boolean(t)) : found;
+      // Two even rows: an odd count drops the last tile (e.g. "Інше").
+      const tiles = ordered.length > 2 && ordered.length % 2 ? ordered.slice(0, -1) : ordered;
       if (!tiles.length) return null;
-      const ordered = c.slugs?.length ? c.slugs.map((s) => tiles.find((t) => t.slug === s)).filter((t): t is (typeof tiles)[number] => Boolean(t)) : tiles;
+      const perRow = Math.ceil(tiles.length / 2);
       return (
         <section className="container-page py-12 lg:py-16">
           <SectionHeading title={section.title} subtitle={section.subtitle} href={section.buttonLink} linkLabel={section.buttonLabel} />
-          <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-3 md:px-0 lg:grid-cols-6 lg:gap-4">
-            {ordered.map((t) => (
-              <Link key={t.id} href={`/shop/${t.slug}`} className="group w-[40%] shrink-0 snap-start md:w-auto">
-                <div className="relative aspect-[3/4] overflow-hidden bg-muted">
-                  {t.image && <Image src={t.image} alt={t.name} fill sizes="(min-width:1024px) 16vw, (min-width:768px) 33vw, 40vw" className="object-cover transition-transform duration-700 group-hover:scale-[1.03]" />}
+          <div
+            className="grid grid-cols-2 gap-3 md:grid-cols-[repeat(var(--cols),minmax(0,1fr))] lg:gap-4"
+            style={{ "--cols": perRow } as React.CSSProperties}
+          >
+            {tiles.map((t, i) => (
+              <Link key={t.id} href={`/shop/${t.slug}`} className="group block">
+                <div className={cn("relative aspect-[4/5] overflow-hidden rounded-[4px] bg-muted", perRow <= 3 && "md:aspect-square")}>
+                  <RotatingImage images={t.images} alt={t.name} offset={i * 600} sizes={`(min-width:768px) ${Math.round(100 / perRow)}vw, 50vw`} />
                 </div>
                 <p className="mt-3 text-[12px] font-medium uppercase tracking-[0.12em]">{t.name}</p>
               </Link>

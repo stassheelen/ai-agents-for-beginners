@@ -481,17 +481,34 @@ const coverProduct = {
 } as const;
 const coverOf = (rows: { product: { images: { url: string }[] } }[]) => rows[0]?.product.images[0]?.url ?? null;
 
+/** Category tiles for the homepage: top-level categories with a few product photos each (the tile cycles through them). */
 export const getCategoryTiles = unstable_cache(
   async (slugs?: string[]) => {
     const rows = await prisma.category.findMany({
       where: slugs?.length
         ? { slug: { in: slugs }, published: true }
-        : { published: true, parentId: { not: null }, OR: [{ image: { not: null } }, { products: { some: { product: LISTED } } }] },
+        : { published: true, parentId: null, products: { some: { product: LISTED } } },
       orderBy: { position: "asc" },
       take: 8,
-      select: { id: true, name: true, slug: true, image: true, products: coverProduct },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        image: true,
+        products: {
+          where: { product: LISTED },
+          take: 4,
+          orderBy: { product: { createdAt: "desc" } },
+          select: { product: { select: { images: { take: 1, orderBy: { position: "asc" }, select: { url: true } } } } },
+        },
+      },
     });
-    return rows.map(({ products, ...c }) => ({ ...c, image: c.image ?? coverOf(products) })).filter((c) => c.image);
+    return rows
+      .map(({ products, image, ...c }) => ({
+        ...c,
+        images: [...new Set([image, ...products.map((p) => p.product.images[0]?.url)].filter((u): u is string => Boolean(u)))],
+      }))
+      .filter((c) => c.images.length);
   },
   ["category-tiles"],
   CACHE,
