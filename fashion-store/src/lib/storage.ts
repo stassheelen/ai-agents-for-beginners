@@ -80,9 +80,24 @@ async function validateBuffer(buffer: Buffer) {
   return { detected, isImage, width, height };
 }
 
+/** Longest side of stored photos. Images are served straight from storage, so they are sized for the web on upload. */
+const WEB_IMAGE_MAX = 1600;
+const WEB_IMAGE_BYTES = 400 * 1024;
+
+/** Big or AVIF photos → WEBP up to 1600px (EXIF rotation applied); small JPG/PNG/WEBP and GIFs are kept as they are. */
+async function webReady(buffer: Buffer, v: Awaited<ReturnType<typeof validateBuffer>>) {
+  const large = (v.width ?? 0) > WEB_IMAGE_MAX || (v.height ?? 0) > WEB_IMAGE_MAX || buffer.length > WEB_IMAGE_BYTES;
+  if (!v.isImage || v.detected === "image/gif" || (!large && v.detected !== "image/avif")) return { buffer, ...v };
+  const { data, info } = await sharp(buffer)
+    .rotate()
+    .resize({ width: WEB_IMAGE_MAX, height: WEB_IMAGE_MAX, fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer({ resolveWithObject: true });
+  return { buffer: data, detected: "image/webp", isImage: true, width: info.width, height: info.height };
+}
+
 export async function storeFile(input: { buffer: Buffer; filename: string; declaredType?: string; alt?: string }) {
-  const { buffer } = input;
-  const { detected, isImage, width, height } = await validateBuffer(buffer);
+  const { buffer, detected, isImage, width, height } = await webReady(input.buffer, await validateBuffer(input.buffer));
   const ext = IMAGE_TYPES[detected] ?? VIDEO_TYPES[detected];
   const base = path
     .basename(input.filename, path.extname(input.filename))

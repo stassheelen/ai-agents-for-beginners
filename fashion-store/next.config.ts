@@ -7,6 +7,9 @@ const extraHosts = (process.env.IMAGE_REMOTE_HOSTS ?? "")
 
 const nextConfig: NextConfig = {
   images: {
+    // Photos are served as stored (resized to WEBP on upload): the hosting plan's image-optimisation quota
+    // runs out with a large catalogue, and then every new image size fails to load.
+    unoptimized: true,
     formats: ["image/avif", "image/webp"],
     qualities: [60, 75, 85],
     remotePatterns: [
