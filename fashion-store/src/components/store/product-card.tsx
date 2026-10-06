@@ -36,7 +36,7 @@ export function ProductCard({
 
   return (
     <article className="group/card relative flex flex-col">
-      <div className="relative aspect-[4/5] overflow-hidden rounded-[4px] bg-muted">
+      <div className="relative aspect-[3/4] overflow-hidden rounded-[4px] bg-muted sm:aspect-[4/5]">
         <Link href={`/products/${product.slug}`} className="absolute inset-0 overflow-hidden" aria-label={product.name}>
           <div className="absolute inset-0 transition-transform duration-700 ease-[cubic-bezier(0.22,0.61,0.36,1)] lg:group-hover/card:scale-[1.03]">
             {primary && (
@@ -77,54 +77,51 @@ export function ProductCard({
           className="absolute right-1.5 top-1.5 size-10 justify-center rounded-full bg-white/0 transition-[background-color,transform] duration-300 hover:scale-105 active:scale-90 group-hover/card:bg-white/85 focus-visible:bg-white/85 sm:right-2 sm:top-2"
         />
 
-        {product.available ? (
-          <button
-            type="button"
-            onClick={() => openQuickAdd(product.id)}
-            className="absolute bottom-2 right-2 flex size-10 items-center justify-center rounded-full bg-white/90 backdrop-blur-sm transition-[opacity,transform,background-color] duration-300 ease-out hover:bg-white active:scale-95 lg:inset-x-3 lg:bottom-3 lg:h-11 lg:w-auto lg:translate-y-2 lg:rounded-full lg:opacity-0 lg:group-hover/card:translate-y-0 lg:group-hover/card:opacity-100 lg:focus-visible:translate-y-0 lg:focus-visible:opacity-100"
-            aria-label={`Швидко додати ${product.name}`}
-          >
-            <Plus className="size-4 lg:hidden" strokeWidth={1.5} />
-            <span className="hidden text-[11px] font-medium uppercase tracking-[0.16em] lg:inline">Швидко додати</span>
-          </button>
-        ) : (
-          <span className="absolute inset-x-2 bottom-2 rounded-full bg-white/90 py-2 text-center text-[10px] uppercase tracking-[0.14em] text-muted-foreground lg:inset-x-3 lg:bottom-3">
-            Немає в наявності
-          </span>
-        )}
-      </div>
-
-      <div className="flex flex-1 flex-col pt-3.5 text-[13px] leading-snug sm:text-sm">
-        <Link href={`/products/${product.slug}`} className="line-clamp-2 font-medium decoration-1 underline-offset-4 hover:underline">
-          {product.name}
-        </Link>
-        <div className="mt-0.5 flex min-h-5 items-center gap-2 text-[12px] text-muted-foreground sm:text-[13px]">
-          {shownColor && <span className="truncate">{shownColor.name}</span>}
-          {product.colors.length > 1 && (
-            <div className="ml-auto flex shrink-0 items-center gap-1">
-              {product.colors.slice(0, 4).map((c) => (
-                <button
-                  key={c.slug}
-                  type="button"
-                  title={c.name}
-                  aria-label={`Колір: ${c.name}`}
-                  aria-pressed={shownColor?.slug === c.slug && Boolean(swatchImage)}
-                  onMouseEnter={() => c.image && setSwatchImage(c.image)}
-                  onMouseLeave={() => setSwatchImage(null)}
-                  onClick={() => c.image && setSwatchImage((cur) => (cur === c.image ? null : c.image))}
-                  className="flex size-6 items-center justify-center rounded-full"
-                >
-                  <span
-                    className={cn("size-3 rounded-full border border-black/15 ring-offset-1 transition-shadow duration-200 hover:ring-1 hover:ring-foreground", swatchImage === c.image && c.image && "ring-1 ring-foreground")}
-                    style={{ background: c.hex }}
-                  />
-                </button>
-              ))}
-              {product.colors.length > 4 && <span className="text-[11px]">+{product.colors.length - 4}</span>}
+        {/* Caption on the photo: frosted-glass panel with name, price, colours and quick add. */}
+        <div className="absolute inset-x-1.5 bottom-1.5 flex items-end gap-2 rounded-[10px] border border-white/50 bg-white/55 p-2 pl-2.5 shadow-[0_10px_30px_-14px_rgba(0,0,0,0.35)] backdrop-blur-md backdrop-saturate-150 sm:inset-x-2.5 sm:bottom-2.5 sm:p-2.5 sm:pl-3">
+          <div className="min-w-0 flex-1">
+            <Link href={`/products/${product.slug}`} className="line-clamp-2 text-[12px] font-medium leading-snug decoration-1 underline-offset-4 hover:underline sm:text-[13px]">
+              {product.name}
+            </Link>
+            <div className="mt-1 flex items-center gap-2">
+              <Price price={product.price} compareAt={product.compareAtPrice} currency={product.currency} className="text-[12px] sm:text-[13px]" />
+              {product.colors.length > 1 && (
+                <div className="ml-auto hidden shrink-0 items-center sm:flex">
+                  {product.colors.slice(0, 4).map((c) => (
+                    <button
+                      key={c.slug}
+                      type="button"
+                      title={c.name}
+                      aria-label={`Колір: ${c.name}`}
+                      aria-pressed={shownColor?.slug === c.slug && Boolean(swatchImage)}
+                      onMouseEnter={() => c.image && setSwatchImage(c.image)}
+                      onMouseLeave={() => setSwatchImage(null)}
+                      onClick={() => c.image && setSwatchImage((cur) => (cur === c.image ? null : c.image))}
+                      className="flex size-5 items-center justify-center rounded-full"
+                    >
+                      <span
+                        className={cn("size-2.5 rounded-full border border-black/15 ring-offset-1 transition-shadow duration-200 hover:ring-1 hover:ring-foreground", swatchImage === c.image && c.image && "ring-1 ring-foreground")}
+                        style={{ background: c.hex }}
+                      />
+                    </button>
+                  ))}
+                  {product.colors.length > 4 && <span className="pl-0.5 text-[10px] text-muted-foreground">+{product.colors.length - 4}</span>}
+                </div>
+              )}
             </div>
+            {!product.available && <p className="mt-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Немає в наявності</p>}
+          </div>
+          {product.available && (
+            <button
+              type="button"
+              onClick={() => openQuickAdd(product.id)}
+              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-white transition-transform duration-200 hover:scale-105 active:scale-95 sm:size-9"
+              aria-label={`Швидко додати ${product.name}`}
+            >
+              <Plus className="size-4" strokeWidth={1.75} />
+            </button>
           )}
         </div>
-        <Price price={product.price} compareAt={product.compareAtPrice} currency={product.currency} className="mt-1.5 text-[13px] sm:text-sm" />
       </div>
     </article>
   );

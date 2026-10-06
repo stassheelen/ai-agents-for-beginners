@@ -52,7 +52,7 @@ export async function RenderSection({ section, index }: { section: HomepageSecti
           {section.type === "PRODUCT_CAROUSEL" ? (
             <ProductRail products={products} autoplay={autoplay ? 3500 : undefined} />
           ) : (
-            <div className="grid grid-cols-2 gap-x-3 gap-y-10 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 lg:gap-4">
               {products.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}

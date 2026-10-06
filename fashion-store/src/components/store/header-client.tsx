@@ -180,7 +180,7 @@ export function HeaderClient({
             ref={logoRef}
             href="/"
             className={cn(
-              "justify-self-center font-display font-semibold leading-none tracking-[0.34em] transition-[font-size,opacity] duration-300 lg:justify-self-start",
+              "justify-self-center font-display font-semibold leading-none tracking-[0.22em] transition-[font-size,opacity] duration-300 lg:justify-self-start",
               "text-xl",
               scrolled ? "lg:text-[26px]" : "lg:text-[30px]",
               // On the homepage the big wordmark below stands in for it until it has shrunk into place.
@@ -189,7 +189,7 @@ export function HeaderClient({
             aria-label={`${storeName} — головна`}
           >
             {/* Trailing letter-spacing would push the word off-centre */}
-            <span className="logo-shine logo-shine-once -mr-[0.34em]">
+            <span className="logo-shine logo-shine-once -mr-[0.22em]">
               {storeName}
             </span>
           </Link>
@@ -280,13 +280,13 @@ export function HeaderClient({
         {home && (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-full flex h-[calc(17vw+24px)] max-h-[280px] items-center justify-center overflow-visible motion-reduce:hidden"
+            className="pointer-events-none absolute inset-x-0 top-full flex h-[calc(13vw+28px)] max-h-[240px] items-center justify-center overflow-visible motion-reduce:hidden"
           >
             <span
               ref={bigRef}
-              className="block origin-top-left font-display text-[min(17vw,240px)] font-semibold leading-none tracking-[0.34em] will-change-transform"
+              className="block origin-top-left font-display text-[min(13vw,200px)] font-semibold leading-none tracking-[0.22em] will-change-transform"
             >
-              <span className="logo-shine logo-shine-once -mr-[0.34em]">
+              <span className="logo-shine logo-shine-once -mr-[0.22em]">
                 {storeName}
               </span>
             </span>
@@ -488,7 +488,7 @@ export function HeaderClient({
         <div
           ref={spacerRef}
           aria-hidden
-          className="h-[calc(17vw+24px)] max-h-[280px] motion-reduce:hidden"
+          className="h-[calc(13vw+28px)] max-h-[240px] motion-reduce:hidden"
         />
       )}
     </>

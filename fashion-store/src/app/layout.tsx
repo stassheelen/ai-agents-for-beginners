@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Inter_Tight } from "next/font/google";
+import { Inter, Unbounded } from "next/font/google";
 import { siteUrl } from "@/lib/utils";
 import "./globals.css";
 
 const body = Inter({ variable: "--font-body", subsets: ["latin", "cyrillic"], display: "swap" });
-const display = Inter_Tight({ variable: "--font-display", subsets: ["latin", "cyrillic"], weight: ["400", "500", "600"], display: "swap" });
+const display = Unbounded({ variable: "--font-display", subsets: ["latin", "cyrillic"], weight: ["400", "500", "600"], display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),

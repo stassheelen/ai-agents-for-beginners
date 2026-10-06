@@ -439,7 +439,7 @@ export function CatalogGrid({ initial, hasMore: initialHasMore, params, total }:
 
   return (
     <div>
-      <div ref={gridRef} className="grid grid-cols-2 gap-x-3 gap-y-10 md:grid-cols-3 md:gap-x-4 lg:grid-cols-4 lg:gap-x-5 lg:gap-y-14">
+      <div ref={gridRef} className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 lg:gap-5">
         {items.map((p, i) => (
           <ProductCard key={p.id} product={p} priority={i < 4} preferColors={params.colors} sizes="(min-width:1024px) 25vw, (min-width:768px) 33vw, 50vw" />
         ))}

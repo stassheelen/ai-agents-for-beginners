@@ -11,7 +11,7 @@ export function WishlistGrid({ products }: { products: ProductCardData[] }) {
   return (
     <>
       <p className="mt-3 text-sm text-muted-foreground">{visible.length} товарів</p>
-      <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-10 md:grid-cols-3 lg:gap-x-4 xl:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3 lg:gap-4 xl:grid-cols-4">
         {visible.map((p) => (
           <ProductCard key={p.id} product={p} />
         ))}
