@@ -4,6 +4,7 @@ import { mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import sharp from "sharp";
+import { AwsClient } from "aws4fetch";
 import { prisma } from "@/lib/db";
 
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -50,6 +51,36 @@ function sniff(buf: Buffer): string | null {
 }
 
 export const blobEnabled = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+
+// ── Cloudflare R2 (S3-compatible). Preferred over Vercel Blob when configured. ──
+const R2_VARS = ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET", "R2_PUBLIC_URL"] as const;
+export const r2Enabled = () => R2_VARS.every((k) => Boolean(process.env[k]?.trim()));
+const r2PublicBase = () => (process.env.R2_PUBLIC_URL ?? "").trim().replace(/\/+$/, "");
+let r2Client: AwsClient | null = null;
+function r2() {
+  r2Client ??= new AwsClient({
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!.trim(),
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!.trim(),
+    service: "s3",
+    region: "auto",
+  });
+  return r2Client;
+}
+const r2ObjectUrl = (key: string) =>
+  `https://${process.env.R2_ACCOUNT_ID!.trim()}.r2.cloudflarestorage.com/${encodeURIComponent(process.env.R2_BUCKET!.trim())}/${key.split("/").map(encodeURIComponent).join("/")}`;
+
+async function r2Put(key: string, buffer: Buffer, contentType: string) {
+  const res = await r2().fetch(r2ObjectUrl(key), {
+    method: "PUT",
+    body: new Uint8Array(buffer),
+    headers: { "content-type": contentType, "cache-control": "public, max-age=31536000, immutable" },
+  });
+  if (!res.ok) throw new UploadError(`Сховище R2 відхилило файл (${res.status})`);
+  return `${r2PublicBase()}/${key}`;
+}
+
+/** Browser → Vercel Blob direct uploads are only used while Blob is the active storage. */
+export const directUploadEnabled = () => blobEnabled() && !r2Enabled();
 
 /**
  * Validates and stores a file. Uses Vercel Blob in production; falls back to
@@ -108,7 +139,9 @@ export async function storeFile(input: { buffer: Buffer; filename: string; decla
   const key = `media/${base}-${crypto.randomBytes(5).toString("hex")}.${ext}`;
 
   let url: string;
-  if (blobEnabled()) {
+  if (r2Enabled()) {
+    url = await r2Put(key, buffer, detected);
+  } else if (blobEnabled()) {
     const blob = await put(key, buffer, { access: "public", contentType: detected, addRandomSuffix: false });
     url = blob.url;
   } else {
@@ -144,9 +177,9 @@ export async function importRemoteFile(rawUrl: string, alt?: string) {
   }
   assertPublicHttpUrl(url);
 
-  // Already stored by us (or imported before) — reuse
-  const existing = await prisma.media.findFirst({ where: { OR: [{ url: rawUrl }, { sourceUrl: rawUrl }] } });
-  if (existing) return existing;
+  // Already stored by us (or imported before) — reuse, unless it sits in an old storage we have moved away from
+  const existing = await prisma.media.findFirst({ where: { OR: [{ url: rawUrl }, { sourceUrl: rawUrl }] }, orderBy: { createdAt: "desc" } });
+  if (existing && (!r2Enabled() || existing.url.startsWith(`${r2PublicBase()}/`) || existing.url.startsWith("/"))) return existing;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
@@ -171,6 +204,8 @@ export async function deleteStoredFile(url: string) {
   try {
     if (url.startsWith("/uploads/")) {
       await unlink(path.join(process.cwd(), "public", url));
+    } else if (r2Enabled() && url.startsWith(`${r2PublicBase()}/`)) {
+      await r2().fetch(r2ObjectUrl(decodeURIComponent(url.slice(r2PublicBase().length + 1))), { method: "DELETE" });
     } else if (blobEnabled() && url.includes(".blob.vercel-storage.com")) {
       await del(url);
     }
