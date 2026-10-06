@@ -12,6 +12,7 @@ import { slugify, toMinor } from "@/lib/utils";
 import { parseYml } from "@/lib/yml-feed";
 import { CATEGORY_GROUPS } from "@/lib/category-groups";
 import { colorHexFromName } from "@/lib/color-names";
+import { ukLabel } from "@/lib/uk-labels";
 
 const groupIndex = (name: string) => (CATEGORY_GROUPS as readonly string[]).indexOf(name);
 
@@ -732,6 +733,10 @@ export async function commitImport(
   rows: ParsedRow[],
   opts: { chunk?: number } = {},
 ): Promise<ImportResult> {
+  // Supplier labels in Russian (colour, size, fabric) are stored in Ukrainian.
+  for (const r of rows) {
+    for (const f of ["color", "size", "material"] as const) if (r.data[f]) r.data[f] = ukLabel(r.data[f]);
+  }
   const plan = await planImport(rows);
   const result: ImportResult = {
     created: 0,

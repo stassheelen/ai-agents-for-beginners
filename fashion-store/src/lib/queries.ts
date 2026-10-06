@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { STORE_TAG } from "@/lib/cache";
 import { sortSizes } from "@/lib/utils";
+import { ukLabel } from "@/lib/uk-labels";
 
 const CACHE = { revalidate: 300, tags: [STORE_TAG] };
 
@@ -66,7 +67,7 @@ export const getNavigation = unstable_cache(
         select: { id: true, title: true, link: true },
       }),
     ]);
-    return { categories: categories as NavCategory[], collections, colors, megaBanners, announcements };
+    return { categories: categories as NavCategory[], collections, colors: colors.map((c) => ({ ...c, name: ukLabel(c.name) })), megaBanners, announcements };
   },
   ["navigation"],
   CACHE,
@@ -142,7 +143,7 @@ export function toCard(p: CardRow): ProductCardData {
   for (const v of p.variants) {
     if (v.color && !colors.has(v.color.slug)) {
       const img = p.images.find((i) => i.colorName?.toLowerCase() === v.color!.name.toLowerCase());
-      colors.set(v.color.slug, { ...v.color, image: img?.url ?? null });
+      colors.set(v.color.slug, { ...v.color, name: ukLabel(v.color.name), image: img?.url ?? null });
     }
   }
   const primaryImages = p.images.filter((i, idx) => idx < 2 || !i.colorName);
@@ -333,7 +334,7 @@ export async function getCatalogFacets(scope: Pick<CatalogParams, "category" | "
   ]);
   const sizes = sortSizes([...new Set(variants.map((v) => v.size).filter((s): s is string => Boolean(s)))]);
   const colorMap = new Map<string, { name: string; slug: string; hex: string; position: number }>();
-  for (const v of variants) if (v.color) colorMap.set(v.color.slug, v.color);
+  for (const v of variants) if (v.color) colorMap.set(v.color.slug, { ...v.color, name: ukLabel(v.color.name) });
   const colors = [...colorMap.values()].sort((a, b) => a.position - b.position);
   return {
     sizes,
@@ -371,14 +372,17 @@ export const getProductBySlug = unstable_cache(
     if (!product) return null;
     return {
       ...product,
+      // Supplier labels (colours, sizes, fabric) are shown in Ukrainian.
+      material: ukLabel(product.material),
+      images: product.images.map((i) => ({ ...i, colorName: ukLabel(i.colorName) })),
       variants: product.variants.map((v) => ({
         id: v.id,
         sku: v.sku,
-        size: v.size,
+        size: ukLabel(v.size),
         stock: v.stock,
         price: v.price ?? product.price,
         compareAtPrice: v.compareAtPrice ?? product.compareAtPrice,
-        color: v.color ? { name: v.color.name, slug: v.color.slug, hex: v.color.hex } : null,
+        color: v.color ? { name: ukLabel(v.color.name), slug: v.color.slug, hex: v.color.hex } : null,
       })),
       reviews: product.reviews.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
       createdAt: product.createdAt.toISOString(),

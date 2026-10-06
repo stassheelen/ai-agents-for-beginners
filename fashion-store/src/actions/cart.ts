@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { readCartId, setCartId } from "@/lib/visitor";
 import { limitByIp } from "@/lib/rate-limit";
+import { ukLabel } from "@/lib/uk-labels";
 
 export type CartLine = {
   id: string;
@@ -63,8 +64,8 @@ export async function loadCart(cartId: string | null): Promise<CartView> {
         slug: p.slug,
         name: p.name,
         image: img?.url ?? null,
-        color: colorName,
-        size: i.variant.size,
+        color: ukLabel(colorName),
+        size: ukLabel(i.variant.size),
         sku: i.variant.sku,
         quantity: i.quantity,
         unitPrice: i.variant.price ?? p.price,
