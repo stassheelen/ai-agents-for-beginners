@@ -178,3 +178,33 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Logo: a soft light sweep across the wordmark (on hover, and once after load). */
+.logo-shine {
+  background: linear-gradient(105deg, currentColor 0 42%, #b8b2a7 50%, currentColor 58% 100%);
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.logo-shine-once {
+  animation: logo-shine 1.2s 0.5s ease-in-out both;
+}
+a:hover > .logo-shine {
+  animation: logo-shine 1s ease-in-out;
+}
+@keyframes logo-shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-shine,
+  a:hover > .logo-shine {
+    animation: none;
+  }
+}
