@@ -23,6 +23,20 @@ const VIDEO_TYPES: Record<string, string> = {
 
 export class UploadError extends Error {}
 
+/** Only public http(s) URLs: blocks localhost and private / link-local networks (SSRF guard for server-side fetches). */
+export function assertPublicHttpUrl(url: URL) {
+  if (url.protocol !== "https:" && url.protocol !== "http:") throw new UploadError("Дозволені лише посилання http(s)");
+  const host = url.hostname;
+  if (
+    host === "localhost" ||
+    /^(127\.|10\.|192\.168\.|169\.254\.|0\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) ||
+    host.endsWith(".internal") ||
+    host === "[::1]"
+  ) {
+    throw new UploadError("Посилання на приватну мережу заборонені");
+  }
+}
+
 function sniff(buf: Buffer): string | null {
   const hex = buf.subarray(0, 12).toString("hex");
   if (hex.startsWith("ffd8ff")) return "image/jpeg";
@@ -113,16 +127,7 @@ export async function importRemoteFile(rawUrl: string, alt?: string) {
   } catch {
     throw new UploadError(`Некоректне посилання: ${rawUrl}`);
   }
-  if (url.protocol !== "https:" && url.protocol !== "http:") throw new UploadError("Дозволені лише посилання http(s)");
-  const host = url.hostname;
-  if (
-    host === "localhost" ||
-    /^(127\.|10\.|192\.168\.|169\.254\.|0\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) ||
-    host.endsWith(".internal") ||
-    host === "[::1]"
-  ) {
-    throw new UploadError("Посилання на приватну мережу заборонені");
-  }
+  assertPublicHttpUrl(url);
 
   // Already stored by us (or imported before) — reuse
   const existing = await prisma.media.findFirst({ where: { OR: [{ url: rawUrl }, { sourceUrl: rawUrl }] } });

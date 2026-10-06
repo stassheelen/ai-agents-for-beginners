@@ -5,6 +5,7 @@ import type { Prisma, ProductStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { importRemoteFile } from "@/lib/storage";
 import { slugify, toMinor } from "@/lib/utils";
+import { parseYml } from "@/lib/yml-feed";
 
 /**
  * Bulk product import (CSV / XLSX).
@@ -45,7 +46,7 @@ export const IMPORT_COLUMNS = [
   "Бестселер",
 ] as const;
 
-type Field =
+export type Field =
   | "sku"
   | "parentSku"
   | "name"
@@ -206,8 +207,10 @@ export async function parseFile(file: File): Promise<{ rows: ParsedRow[]; unknow
       }
       table.push(values);
     });
+  } else if (name.endsWith(".xml") || name.endsWith(".yml") || file.type.includes("xml")) {
+    return parseFeedText(await file.text());
   } else {
-    throw new Error("Непідтримуваний тип файлу. Завантажте .csv або .xlsx");
+    throw new Error("Непідтримуваний тип файлу. Завантажте .csv, .xlsx або .xml");
   }
   if (table.length < 2) throw new Error("У файлі немає рядків з даними");
   if (table.length - 1 > MAX_ROWS) throw new Error(`Забагато рядків (максимум ${MAX_ROWS}). Розділіть файл.`);
@@ -232,6 +235,14 @@ export async function parseFile(file: File): Promise<{ rows: ParsedRow[]; unknow
     rows.push({ row: r + 1, data });
   }
   return { rows, unknownColumns };
+}
+
+/** Prom / YML product feed (XML) → import rows. */
+export function parseFeedText(xml: string): { rows: ParsedRow[]; unknownColumns: string[] } {
+  const rows = parseYml(xml);
+  if (!rows.length) throw new Error("У фіді не знайдено товарів (<offer>)");
+  if (rows.length > MAX_ROWS) throw new Error(`Забагато товарів у фіді (${rows.length}, максимум ${MAX_ROWS})`);
+  return { rows, unknownColumns: [] };
 }
 
 // ───────────────────────────── Planning ─────────────────────────────

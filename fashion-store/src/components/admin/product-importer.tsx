@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Papa from "papaparse";
-import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Loader2, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Link2, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, CardContent, CardHeader, CardTitle, Table, TD, TH, THead, TR } from "@/components/ui/misc";
@@ -46,7 +46,10 @@ function downloadCsv(name: string, rows: (string | number)[][]) {
 }
 
 export function ProductImporter({ columns }: { columns: string[] }) {
-  const [file, setFile] = React.useState<File | null>(null);
+  // What is being imported: an uploaded file or a feed URL (fetched by the server).
+  type Source = { file: File; url?: undefined; label: string } | { file?: undefined; url: string; label: string };
+  const [source, setSource] = React.useState<Source | null>(null);
+  const [feedUrl, setFeedUrl] = React.useState("");
   const [preview, setPreview] = React.useState<Preview | null>(null);
   const [result, setResult] = React.useState<Result | null>(null);
   const [busy, setBusy] = React.useState<null | "preview" | "commit">(null);
@@ -55,9 +58,10 @@ export function ProductImporter({ columns }: { columns: string[] }) {
   const [progress, setProgress] = React.useState<{ done: number; total: number } | null>(null);
   const input = React.useRef<HTMLInputElement>(null);
 
-  const send = async (f: File, mode: "preview" | "commit", chunk?: number) => {
+  const send = async (src: Source, mode: "preview" | "commit", chunk?: number) => {
     const fd = new FormData();
-    fd.append("file", f);
+    if (src.file) fd.append("file", src.file);
+    else fd.append("url", src.url);
     fd.append("mode", mode);
     if (chunk !== undefined) fd.append("chunk", String(chunk));
     const res = await fetch("/api/admin/import", { method: "POST", body: fd });
@@ -66,33 +70,43 @@ export function ProductImporter({ columns }: { columns: string[] }) {
     return json;
   };
 
-  const onFile = async (f: File | undefined) => {
-    if (!f) return;
-    if (!/\.(csv|xlsx)$/i.test(f.name)) return toast.error("Завантажте файл .csv або .xlsx");
-    setFile(f);
+  const load = async (src: Source) => {
+    setSource(src);
     setPreview(null);
     setResult(null);
     setBusy("preview");
     try {
-      const json = await send(f, "preview");
+      const json = await send(src, "preview");
       setPreview(json.preview);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Не вдалося прочитати файл");
-      setFile(null);
+      setSource(null);
     } finally {
       setBusy(null);
     }
   };
 
+  const onFile = async (f: File | undefined) => {
+    if (!f) return;
+    if (!/\.(csv|xlsx|xml|yml)$/i.test(f.name)) return toast.error("Завантажте файл .csv, .xlsx або .xml");
+    await load({ file: f, label: f.name });
+  };
+
+  const onFeed = async () => {
+    const url = feedUrl.trim();
+    if (!/^https?:\/\/\S+$/i.test(url)) return toast.error("Вставте посилання, що починається з https://");
+    await load({ url, label: new URL(url).hostname });
+  };
+
   const confirmImport = async () => {
-    if (!file) return;
+    if (!source) return;
     setBusy("commit");
     setProgress({ done: 0, total: preview?.newProducts !== undefined ? preview.newProducts + preview.updatedProducts : 0 });
     // Commit in chunks so big files never hit the server time limit and progress stays visible.
     const total: Result = { created: 0, updated: 0, skipped: 0, errors: 0, errorRows: [], warnings: [] };
     try {
       for (let chunk = 0; ; chunk++) {
-        const r: Result = (await send(file, "commit", chunk)).result;
+        const r: Result = (await send(source, "commit", chunk)).result;
         total.created += r.created;
         total.updated += r.updated;
         total.skipped += r.skipped;
@@ -119,7 +133,7 @@ export function ProductImporter({ columns }: { columns: string[] }) {
   };
 
   const reset = () => {
-    setFile(null);
+    setSource(null);
     setPreview(null);
     setResult(null);
   };
@@ -130,6 +144,7 @@ export function ProductImporter({ columns }: { columns: string[] }) {
     <div className="space-y-4">
       {!preview && !result && (
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+          <div className="space-y-4">
           <div
             onDragOver={(e) => {
               e.preventDefault();
@@ -147,9 +162,36 @@ export function ProductImporter({ columns }: { columns: string[] }) {
             className={cn("flex min-h-64 cursor-pointer flex-col items-center justify-center gap-3 border border-dashed border-input bg-white p-10 text-center hover:border-foreground", over && "border-foreground bg-muted")}
           >
             {busy === "preview" ? <Loader2 className="size-7 animate-spin" /> : <FileSpreadsheet className="size-7" strokeWidth={1.4} />}
-            <p className="text-sm font-medium">{busy === "preview" ? `Читаємо ${file?.name}…` : "Перетягніть CSV або XLSX сюди або натисніть, щоб вибрати"}</p>
+            <p className="text-sm font-medium">{busy === "preview" ? `Читаємо ${source?.label}…` : "Перетягніть CSV, XLSX або XML сюди або натисніть, щоб вибрати"}</p>
             <p className="text-xs text-muted-foreground">До 5 000 рядків · 10 МБ. Один рядок — один варіант (колір / розмір).</p>
-            <input ref={input} type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+            <input ref={input} type="file" accept=".csv,.xlsx,.xml,.yml,text/csv,text/xml,application/xml,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+          </div>
+          <form
+            className="border border-input bg-white p-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void onFeed();
+            }}
+          >
+            <label htmlFor="feed-url" className="flex items-center gap-2 text-sm font-medium">
+              <Link2 className="size-4" strokeWidth={1.5} /> Або посилання на XML-фід (Prom / YML)
+            </label>
+            <p className="mt-1 text-xs text-muted-foreground">Сайт сам завантажить фід постачальника. Товари з однаковим group_id стануть одним товаром з варіантами; повторний імпорт оновить ціни й залишки за артикулом.</p>
+            <div className="mt-3 flex gap-2">
+              <input
+                id="feed-url"
+                type="url"
+                inputMode="url"
+                placeholder="https://…/yml_prom/…"
+                value={feedUrl}
+                onChange={(e) => setFeedUrl(e.target.value)}
+                className="h-10 min-w-0 flex-1 border border-input px-3 text-sm outline-none focus:border-foreground"
+              />
+              <Button type="submit" disabled={Boolean(busy) || !feedUrl.trim()}>
+                {busy === "preview" && source?.url ? <Loader2 className="animate-spin" /> : null} Завантажити
+              </Button>
+            </div>
+          </form>
           </div>
           <Card>
             <CardHeader>
@@ -188,7 +230,7 @@ export function ProductImporter({ columns }: { columns: string[] }) {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Попередній перегляд · {file?.name}</CardTitle>
+              <CardTitle>Попередній перегляд · {source?.label}</CardTitle>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={reset} disabled={Boolean(busy)}>
                   Скасувати
