@@ -12,6 +12,7 @@ import { SORT_LABELS } from "@/lib/catalog-params";
 import { cn, formatMoney, pluralUk } from "@/lib/utils";
 import { ProductCard } from "./product-card";
 import { useReveal } from "./use-reveal";
+import { swatchBackground } from "@/lib/color-names";
 
 export type Facets = {
   sizes: string[];
@@ -128,7 +129,7 @@ function ColorOptions({ facets }: { facets: Facets }) {
             aria-pressed={on}
             className="flex min-h-10 items-center gap-2.5 rounded-md px-2 text-left text-sm transition-colors duration-200 hover:bg-soft"
           >
-            <span className={cn("size-5 shrink-0 rounded-full border border-black/15 ring-offset-2 transition-shadow duration-200", on && "ring-1 ring-foreground")} style={{ background: c.hex }} />
+            <span className={cn("size-5 shrink-0 rounded-full border border-black/15 ring-offset-2 transition-shadow duration-200", on && "ring-1 ring-foreground")} style={{ background: swatchBackground(c.name, c.hex) }} />
             <span className={cn(on && "font-medium")}>{c.name}</span>
           </button>
         );

@@ -11,6 +11,7 @@ import {
 import { slugify, toMinor } from "@/lib/utils";
 import { parseYml } from "@/lib/yml-feed";
 import { CATEGORY_GROUPS } from "@/lib/category-groups";
+import { colorHexFromName } from "@/lib/color-names";
 
 const groupIndex = (name: string) => (CATEGORY_GROUPS as readonly string[]).indexOf(name);
 
@@ -601,7 +602,7 @@ async function findOrCreateColor(
       ? hex.startsWith("#")
         ? hex
         : `#${hex}`
-      : (COLOR_HEX[key] ?? "#888888");
+      : (COLOR_HEX[key] ?? colorHexFromName(name) ?? "#888888");
     let slug = slugify(name) || `color-${count + 1}`;
     if (
       await prisma.color.findUnique({ where: { slug }, select: { id: true } })

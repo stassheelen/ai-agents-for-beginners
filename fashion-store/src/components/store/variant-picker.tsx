@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { swatchBackground } from "@/lib/color-names";
 
 export type PickerVariant = { id: string; color: string | null; size: string | null; stock: number };
 
@@ -36,7 +37,7 @@ export function ColorSwatches({
             aria-pressed={value === c.name}
             title={c.name}
             className={cn("size-8 rounded-full border border-black/15 ring-offset-2 transition-shadow", value === c.name ? "ring-1 ring-foreground" : "hover:ring-1 hover:ring-foreground/40")}
-            style={{ background: c.hex }}
+            style={{ background: swatchBackground(c.name, c.hex) }}
           />
         ))}
       </div>

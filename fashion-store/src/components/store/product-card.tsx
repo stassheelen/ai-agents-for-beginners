@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Price } from "./price";
 import { WishlistButton } from "./wishlist-button";
 import { useStore } from "./store-context";
+import { swatchBackground } from "@/lib/color-names";
 
 export function ProductCard({
   product,
@@ -101,7 +102,7 @@ export function ProductCard({
                     >
                       <span
                         className={cn("size-2.5 rounded-full border border-black/15 ring-offset-1 transition-shadow duration-200 hover:ring-1 hover:ring-foreground", swatchImage === c.image && c.image && "ring-1 ring-foreground")}
-                        style={{ background: c.hex }}
+                        style={{ background: swatchBackground(c.name, c.hex) }}
                       />
                     </button>
                   ))}

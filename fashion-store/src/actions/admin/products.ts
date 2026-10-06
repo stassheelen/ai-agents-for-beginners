@@ -8,6 +8,7 @@ import { invalidateStore } from "@/lib/cache";
 import { removeDemoContent } from "@/lib/demo-content";
 import { roundAllPrices } from "@/lib/round-prices";
 import { slugify } from "@/lib/utils";
+import { colorHexFromName } from "@/lib/color-names";
 
 const money = z.coerce.number().int().min(0).max(1_000_000_000);
 const optMoney = z.union([money, z.null()]).optional();
@@ -73,7 +74,7 @@ async function colorIdFor(tx: Prisma.TransactionClient, name: string | null | un
     return existing.id;
   }
   const count = await tx.color.count();
-  const created = await tx.color.create({ data: { name: clean, slug: slugify(clean) || `color-${count + 1}`, hex: hex ?? "#888888", position: count } });
+  const created = await tx.color.create({ data: { name: clean, slug: slugify(clean) || `color-${count + 1}`, hex: hex ?? colorHexFromName(clean) ?? "#888888", position: count } });
   return created.id;
 }
 

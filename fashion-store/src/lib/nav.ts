@@ -1,5 +1,6 @@
 import "server-only";
 import { getNavigation } from "@/lib/queries";
+import { swatchBackground } from "@/lib/color-names";
 
 export type NavLink = { label: string; href: string; swatch?: string };
 export type NavColumn = { title: string; links: NavLink[] };
@@ -15,7 +16,7 @@ export async function buildNav(): Promise<{ items: NavItem[]; announcements: { i
   const colorCol = (base: string): NavColumn => ({
     title: "Кольори",
     links: [
-      ...uniqueColors.slice(0, MAX_COLORS).map((c) => ({ label: c.name, href: `${base}${base.includes("?") ? "&" : "?"}color=${c.slug}`, swatch: c.hex })),
+      ...uniqueColors.slice(0, MAX_COLORS).map((c) => ({ label: c.name, href: `${base}${base.includes("?") ? "&" : "?"}color=${c.slug}`, swatch: swatchBackground(c.name, c.hex) })),
       ...(uniqueColors.length > MAX_COLORS ? [{ label: "Усі кольори →", href: base }] : []),
     ],
   });
