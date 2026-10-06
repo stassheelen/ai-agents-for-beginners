@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/db";
+import { LISTED } from "@/lib/queries";
 import { siteUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +8,7 @@ export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [products, categories, collections] = await Promise.all([
-    prisma.product.findMany({ where: { status: "PUBLISHED" }, select: { slug: true, updatedAt: true, images: { take: 1, orderBy: { position: "asc" }, select: { url: true } } } }),
+    prisma.product.findMany({ where: LISTED, select: { slug: true, updatedAt: true, images: { take: 1, orderBy: { position: "asc" }, select: { url: true } } } }),
     prisma.category.findMany({ where: { published: true }, select: { slug: true, updatedAt: true } }),
     prisma.collection.findMany({ where: { published: true }, select: { slug: true, updatedAt: true } }),
   ]);

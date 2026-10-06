@@ -630,7 +630,8 @@ export async function commitImport(rows: ParsedRow[], opts: { chunk?: number } =
             const price = toMinor(d.price)!;
             const stock = d.stock ? Math.max(0, parseInt(d.stock.replace(/\s/g, ""), 10)) : undefined;
             const existing = existingVariants.find((v) => v.sku.toLowerCase() === d.sku!.toLowerCase());
-            const size = d.size ? d.size.toUpperCase() : null;
+            // Letter sizes are normalised (s → S); words like "Норма" keep their case.
+            const size = d.size ? (d.size.length <= 4 ? d.size.toUpperCase() : d.size) : null;
             // Same colour + size under another SKU: keep the row, drop the colour link and flag it for manual editing.
             const clash = colorId && size ? await tx.productVariant.findFirst({ where: { productId: product.id, colorId, size, ...(existing ? { id: { not: existing.id } } : {}) }, select: { sku: true } }) : null;
             const linkColor = !clash;

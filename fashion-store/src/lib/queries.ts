@@ -7,6 +7,9 @@ import { sortSizes } from "@/lib/utils";
 
 const CACHE = { revalidate: 300, tags: [STORE_TAG] };
 
+/** Products shown in listings: published, with at least one photo and one variant (no empty cards). */
+export const LISTED: Prisma.ProductWhereInput = { status: "PUBLISHED", images: { some: {} }, variants: { some: {} } };
+
 // ───────────────────────────── Settings ─────────────────────────────
 
 export const getSettings = unstable_cache(
@@ -166,7 +169,7 @@ export type ProductSource = "new" | "bestseller" | "sale" | "featured" | "collec
 
 export const getProductsBySource = unstable_cache(
   async (source: ProductSource, limit = 8, slug?: string) => {
-    const where: Prisma.ProductWhereInput = { status: "PUBLISHED" };
+    const where: Prisma.ProductWhereInput = { ...LISTED };
     let orderBy: Prisma.ProductOrderByWithRelationInput[] = [{ createdAt: "desc" }];
     switch (source) {
       case "new":
@@ -230,7 +233,7 @@ async function categorySubtreeIds(slug: string): Promise<string[]> {
 }
 
 export async function buildCatalogWhere(p: CatalogParams): Promise<Prisma.ProductWhereInput> {
-  const and: Prisma.ProductWhereInput[] = [{ status: "PUBLISHED" }];
+  const and: Prisma.ProductWhereInput[] = [LISTED];
 
   if (p.category) {
     const ids = await categorySubtreeIds(p.category);
@@ -393,7 +396,7 @@ export const getRelatedProducts = unstable_cache(
   async (productId: string, categoryId: string | null, limit = 8) => {
     const rows = await prisma.product.findMany({
       where: {
-        status: "PUBLISHED",
+        ...LISTED,
         id: { not: productId },
         ...(categoryId ? { OR: [{ categoryId }, { bestSeller: true }] } : {}),
       },

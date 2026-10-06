@@ -22,7 +22,7 @@ const variantSchema = z.object({
   sku: z.string().trim().min(1, "Вкажіть артикул варіанту").max(64),
   color: z.string().trim().max(40).optional().nullable(),
   colorHex: z.string().trim().regex(/^#[0-9a-f]{6}$/i).optional().nullable(),
-  size: z.string().trim().max(20).optional().nullable(),
+  size: z.string().trim().max(60).optional().nullable(),
   stock: z.coerce.number().int().min(0).max(1_000_000),
   price: optMoney,
 });
@@ -214,6 +214,20 @@ export async function deleteProducts(ids: string[]): Promise<ActionResult> {
     await prisma.product.deleteMany({ where: { id: { in: ids } } });
     invalidateStore();
     return { ok: true, message: `Видалено товарів: ${ids.length}` };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+/** Products that would show as empty cards: no photo or no variants. */
+const EMPTY_PRODUCT: Prisma.ProductWhereInput = { OR: [{ images: { none: {} } }, { variants: { none: {} } }] };
+
+export async function deleteEmptyProducts(): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const { count } = await prisma.product.deleteMany({ where: EMPTY_PRODUCT });
+    invalidateStore();
+    return { ok: true, message: count ? `Видалено порожніх товарів: ${count}` : "Порожніх товарів немає" };
   } catch (e) {
     return actionError(e);
   }

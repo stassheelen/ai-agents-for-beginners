@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { cardSelect, getCatalog, searchWhere, toCard, type CatalogParams, type ProductCardData } from "@/lib/queries";
+import { cardSelect, getCatalog, LISTED, searchWhere, toCard, type CatalogParams, type ProductCardData } from "@/lib/queries";
 import { limitByIp } from "@/lib/rate-limit";
 import { sortSizes } from "@/lib/utils";
 
@@ -83,7 +83,7 @@ export async function searchSuggestions(q: string): Promise<SearchSuggestions> {
   const term = q.trim();
   if (term.length < 2) return { products: [], categories: [], collections: [], total: 0 };
   if (!(await limitByIp("search", 90, 60))) return { products: [], categories: [], collections: [], total: 0 };
-  const where = { AND: [{ status: "PUBLISHED" as const }, searchWhere(term)] };
+  const where = { AND: [LISTED, searchWhere(term)] };
   const [rows, total, categories, collections] = await Promise.all([
     prisma.product.findMany({ where, take: 6, orderBy: [{ salesCount: "desc" }], select: cardSelect }),
     prisma.product.count({ where }),
@@ -96,7 +96,7 @@ export async function searchSuggestions(q: string): Promise<SearchSuggestions> {
 export async function getProductsByIds(ids: string[]): Promise<ProductCardData[]> {
   const safe = ids.filter((id) => typeof id === "string" && id.length < 40).slice(0, 12);
   if (!safe.length) return [];
-  const rows = await prisma.product.findMany({ where: { id: { in: safe }, status: "PUBLISHED" }, select: cardSelect });
+  const rows = await prisma.product.findMany({ where: { id: { in: safe }, ...LISTED }, select: cardSelect });
   const byId = new Map(rows.map((r) => [r.id, toCard(r)]));
   return safe.map((id) => byId.get(id)).filter((x): x is ProductCardData => Boolean(x));
 }
