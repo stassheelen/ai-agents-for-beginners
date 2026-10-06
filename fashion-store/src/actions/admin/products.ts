@@ -223,6 +223,20 @@ export async function deleteProducts(ids: string[]): Promise<ActionResult> {
 /** Products that would show as empty cards: no photo or no variants. */
 const EMPTY_PRODUCT: Prisma.ProductWhereInput = { OR: [{ images: { none: {} } }, { variants: { none: {} } }] };
 
+/** Products with a photo in the old Vercel Blob store: it was suspended, so those photos no longer load. */
+const BROKEN_PHOTO_PRODUCT: Prisma.ProductWhereInput = { images: { some: { url: { contains: ".blob.vercel-storage.com" } } } };
+
+export async function deleteBrokenPhotoProducts(): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const { count } = await prisma.product.deleteMany({ where: BROKEN_PHOTO_PRODUCT });
+    invalidateStore();
+    return { ok: true, message: count ? `Видалено товарів зі зламаними фото: ${count}` : "Таких товарів немає" };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
 export async function deleteEmptyProducts(): Promise<ActionResult> {
   try {
     await requireAdmin();

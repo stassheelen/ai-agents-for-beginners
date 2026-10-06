@@ -6,11 +6,13 @@ import { PageHeader } from "@/components/admin/shell";
 import { Button } from "@/components/ui/button";
 import { ProductsTable } from "@/components/admin/products-table";
 import { AdminFilters } from "@/components/admin/filters";
-import { DeleteEmptyProducts } from "@/components/admin/delete-empty-products";
+import { DeleteBrokenPhotoProducts, DeleteEmptyProducts } from "@/components/admin/delete-empty-products";
 import { DeleteDemoContent } from "@/components/admin/delete-demo-content";
 import { countDemoContent } from "@/lib/demo-content";
 
 export const metadata = { title: "Товари" };
+/** Photos in the old Vercel Blob store (suspended) no longer load. */
+const BROKEN_PHOTO: Prisma.ProductWhereInput = { images: { some: { url: { contains: ".blob.vercel-storage.com" } } } };
 const PER_PAGE = 25;
 
 export default async function ProductsPage(props: PageProps<"/admin/products">) {
@@ -35,13 +37,19 @@ export default async function ProductsPage(props: PageProps<"/admin/products">) 
       : {}),
     ...(status && ["DRAFT", "PUBLISHED", "ARCHIVED"].includes(status) ? { status: status as "DRAFT" } : {}),
     ...(category ? { categories: { some: { categoryId: category } } } : {}),
-    ...(content === "no-photo" ? { images: { none: {} } } : content === "no-variants" ? { variants: { none: {} } } : {}),
+    ...(content === "no-photo"
+      ? { images: { none: {} } }
+      : content === "no-variants"
+        ? { variants: { none: {} } }
+        : content === "broken-photo"
+          ? BROKEN_PHOTO
+          : {}),
     ...(stock === "out" ? { variants: { every: { stock: { lte: 0 } } } } : stock === "low" ? { variants: { some: { stock: { gt: 0, lte: 5 } } } } : {}),
   };
   const orderBy: Prisma.ProductOrderByWithRelationInput =
     sort === "name" ? { name: "asc" } : sort === "price-asc" ? { price: "asc" } : sort === "price-desc" ? { price: "desc" } : sort === "created-asc" ? { createdAt: "asc" } : { createdAt: "desc" };
 
-  const [total, rows, categories, emptyCount, demo] = await Promise.all([
+  const [total, rows, categories, emptyCount, demo, brokenCount] = await Promise.all([
     prisma.product.count({ where }),
     prisma.product.findMany({
       where,
@@ -70,6 +78,7 @@ export default async function ProductsPage(props: PageProps<"/admin/products">) 
     prisma.category.findMany({ orderBy: [{ parentId: "asc" }, { position: "asc" }], select: { id: true, name: true, parent: { select: { name: true } } } }),
     prisma.product.count({ where: { OR: [{ images: { none: {} } }, { variants: { none: {} } }] } }),
     countDemoContent(),
+    prisma.product.count({ where: BROKEN_PHOTO }),
   ]);
 
   const products = rows.map((p) => ({
@@ -92,10 +101,11 @@ export default async function ProductsPage(props: PageProps<"/admin/products">) 
     <>
       <PageHeader
         title="Товари"
-        description={`${total} товарів`}
+        description={`${total} товарів${brokenCount ? ` · зі зламаними фото: ${brokenCount}` : ""}`}
         actions={
           <>
             <DeleteDemoContent summary={demo} />
+            {content === "broken-photo" && <DeleteBrokenPhotoProducts count={brokenCount} />}
             <DeleteEmptyProducts count={emptyCount} />
             <Button asChild variant="outline" size="sm">
               <Link href="/admin/products/import">
@@ -115,7 +125,7 @@ export default async function ProductsPage(props: PageProps<"/admin/products">) 
         selects={[
           { name: "status", label: "Усі статуси", options: [{ value: "PUBLISHED", label: "Опубліковано" }, { value: "DRAFT", label: "Чернетка" }, { value: "ARCHIVED", label: "Архів" }] },
           { name: "category", label: "Усі категорії", options: categories.map((c) => ({ value: c.id, label: c.parent ? `${c.parent.name} › ${c.name}` : c.name })) },
-          { name: "content", label: "Усі товари", options: [{ value: "no-photo", label: "Без фото" }, { value: "no-variants", label: "Без варіантів" }] },
+          { name: "content", label: "Усі товари", options: [{ value: "broken-photo", label: "Зламані фото" }, { value: "no-photo", label: "Без фото" }, { value: "no-variants", label: "Без варіантів" }] },
           { name: "stock", label: "Будь-який залишок", options: [{ value: "low", label: "Закінчується" }, { value: "out", label: "Немає в наявності" }] },
           { name: "sort", label: "Спершу нові", options: [{ value: "created-asc", label: "Спершу старі" }, { value: "name", label: "Назва А–Я" }, { value: "price-asc", label: "Ціна ↑" }, { value: "price-desc", label: "Ціна ↓" }] },
         ]}
