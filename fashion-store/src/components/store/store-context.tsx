@@ -4,6 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { addToCart, getCart, removeCartItem, updateCartItem, type CartView } from "@/actions/cart";
 import { getWishlistIds, toggleWishlist as toggleWishlistAction } from "@/actions/wishlist";
+import { NavigationTracker } from "./back-button";
 
 type StoreCtx = {
   cart: CartView;
@@ -141,5 +142,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [cart, cartLoaded, cartOpen, add, update, remove, pending, wishlist, toggleWishlist, quickAddId, searchOpen],
   );
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={value}>
+      <NavigationTracker />
+      {children}
+    </Ctx.Provider>
+  );
 }

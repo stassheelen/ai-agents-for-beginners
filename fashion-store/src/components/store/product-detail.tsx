@@ -13,6 +13,7 @@ import { useStore } from "./store-context";
 import { Price, Stars } from "./price";
 import { ColorSwatches, SizeSelector, stockLabel } from "./variant-picker";
 import { WishlistButton } from "./wishlist-button";
+import { BackButton } from "./back-button";
 
 function Text({ value }: { value: string }) {
   return <div className="whitespace-pre-line">{value}</div>;
@@ -100,12 +101,15 @@ export function ProductDetailView({
     { key: "returns", title: "Повернення", content: product.returnInfo ? `${product.returnInfo}\n\n${returnsInfo ?? ""}` : returnsInfo },
   ].filter((s) => s.content);
 
+  const backHref = product.subcategory ? `/shop/${product.subcategory.slug}` : product.category ? `/shop/${product.category.slug}` : "/shop";
+
   return (
     <div className="lg:container-page lg:grid lg:grid-cols-[minmax(0,1.45fr)_minmax(360px,1fr)] lg:gap-12 xl:gap-20">
       {/* Gallery */}
       <div>
         {/* mobile / tablet: swipe carousel */}
         <div className="relative lg:hidden">
+          <BackButton fallback={backHref} className="absolute left-3 top-3 z-10" />
           <div
             className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto"
             onScroll={(e) => {

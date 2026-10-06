@@ -7,6 +7,7 @@ import { ProductRail } from "@/components/store/product-rail";
 import { RecentlyViewed } from "@/components/store/recently-viewed";
 import { ReviewForm } from "@/components/store/review-form";
 import { ProductJsonLd } from "@/components/store/json-ld";
+import { BackButton } from "@/components/store/back-button";
 import { Stars } from "@/components/store/price";
 import { formatDate, sortSizes } from "@/lib/utils";
 
@@ -49,7 +50,9 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
         reviewCount={product.reviewCount}
         slug={product.slug}
       />
-      <div className="container-page hidden py-5 lg:block">
+      <div className="container-page hidden items-center gap-5 py-5 lg:flex">
+        <BackButton variant="text" fallback={crumbs.at(-2)?.href ?? "/shop"} />
+        <span className="h-3 w-px bg-border" aria-hidden />
         <Breadcrumbs items={crumbs} />
       </div>
       <ProductDetailView product={product} sizeGuide={settings.sizeGuide} deliveryInfo={settings.deliveryInfo} returnsInfo={settings.returnsInfo} />
