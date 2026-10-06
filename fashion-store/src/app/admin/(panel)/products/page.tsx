@@ -6,7 +6,8 @@ import { PageHeader } from "@/components/admin/shell";
 import { Button } from "@/components/ui/button";
 import { ProductsTable } from "@/components/admin/products-table";
 import { AdminFilters } from "@/components/admin/filters";
-import { DeleteBrokenPhotoProducts, DeleteEmptyProducts } from "@/components/admin/delete-empty-products";
+import { DeleteBrokenPhotoProducts, DeleteEmptyProducts, RoundPricesButton } from "@/components/admin/delete-empty-products";
+import { countUnroundedPrices } from "@/lib/round-prices";
 import { DeleteDemoContent } from "@/components/admin/delete-demo-content";
 import { countDemoContent } from "@/lib/demo-content";
 
@@ -49,7 +50,7 @@ export default async function ProductsPage(props: PageProps<"/admin/products">) 
   const orderBy: Prisma.ProductOrderByWithRelationInput =
     sort === "name" ? { name: "asc" } : sort === "price-asc" ? { price: "asc" } : sort === "price-desc" ? { price: "desc" } : sort === "created-asc" ? { createdAt: "asc" } : { createdAt: "desc" };
 
-  const [total, rows, categories, emptyCount, demo, brokenCount] = await Promise.all([
+  const [total, rows, categories, emptyCount, demo, brokenCount, unrounded] = await Promise.all([
     prisma.product.count({ where }),
     prisma.product.findMany({
       where,
@@ -79,6 +80,7 @@ export default async function ProductsPage(props: PageProps<"/admin/products">) 
     prisma.product.count({ where: { OR: [{ images: { none: {} } }, { variants: { none: {} } }] } }),
     countDemoContent(),
     prisma.product.count({ where: BROKEN_PHOTO }),
+    countUnroundedPrices(),
   ]);
 
   const products = rows.map((p) => ({
@@ -104,6 +106,7 @@ export default async function ProductsPage(props: PageProps<"/admin/products">) 
         description={`${total} товарів${brokenCount ? ` · зі зламаними фото: ${brokenCount}` : ""}`}
         actions={
           <>
+            <RoundPricesButton count={unrounded} />
             <DeleteDemoContent summary={demo} />
             {content === "broken-photo" && <DeleteBrokenPhotoProducts count={brokenCount} />}
             <DeleteEmptyProducts count={emptyCount} />

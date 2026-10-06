@@ -41,6 +41,11 @@ export function toMinor(major: number | string | null | undefined): number | nul
   return Math.round(n * 100);
 }
 
+/** Store price rounding (in hryvnias, always down): under 1000 → tens (671 → 670), from 1000 → hundreds (2032 → 2000). */
+export function roundPriceMajor(uah: number) {
+  return uah < 1000 ? Math.floor(uah / 10) * 10 : Math.floor(uah / 100) * 100;
+}
+
 export function fromMinor(minor: number | null | undefined): string {
   if (minor === null || minor === undefined) return "";
   return (minor / 100).toString();

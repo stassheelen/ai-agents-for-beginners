@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { actionError, requireAdmin, type ActionResult } from "@/lib/admin";
 import { invalidateStore } from "@/lib/cache";
 import { removeDemoContent } from "@/lib/demo-content";
+import { roundAllPrices } from "@/lib/round-prices";
 import { slugify } from "@/lib/utils";
 
 const money = z.coerce.number().int().min(0).max(1_000_000_000);
@@ -254,6 +255,17 @@ export async function deleteDemoContent(): Promise<ActionResult> {
     const s = await removeDemoContent();
     invalidateStore();
     return { ok: true, message: `Демо-дані видалено: товарів ${s.products}, замовлень ${s.orders}, банерів ${s.banners}` };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function roundPrices(): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    await roundAllPrices();
+    invalidateStore();
+    return { ok: true, message: "Ціни округлено" };
   } catch (e) {
     return actionError(e);
   }

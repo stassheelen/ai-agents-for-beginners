@@ -3,6 +3,14 @@ import { SaxesParser } from "saxes";
 import type { Field, ParsedRow } from "@/lib/importer";
 import { assertPublicHttpUrl } from "@/lib/storage";
 import { classifyProduct } from "@/lib/category-groups";
+import { roundPriceMajor } from "@/lib/utils";
+
+/** Supplier price → store price (rounded down, see roundPriceMajor). Unparsable values pass through for the importer to report. */
+const roundedPrice = (raw?: string) => {
+  const v = (raw ?? "").replace(/\s/g, "").replace(",", ".");
+  const n = Number(v);
+  return v && Number.isFinite(n) && n > 0 ? String(roundPriceMajor(n)) : v;
+};
 
 /**
  * Prom.ua / Yandex-style YML product feeds:
@@ -195,8 +203,8 @@ export function parseYml(xml: string): ParsedRow[] {
       subcategory: type ?? undefined,
       color: param(COLOR_PARAM) || undefined,
       size: size || undefined,
-      price: (f.price ?? "").replace(",", "."),
-      compareAt: (f.oldprice ?? f.price_old ?? f.old_price ?? "").replace(",", ".") || undefined,
+      price: roundedPrice(f.price),
+      compareAt: roundedPrice(f.oldprice ?? f.price_old ?? f.old_price) || undefined,
       stock,
       description: htmlToText(f.description_ua || f.description || "") || undefined,
       images: o.pictures.join(" ") || undefined,
