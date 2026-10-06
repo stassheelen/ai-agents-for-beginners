@@ -70,11 +70,15 @@ const r2ObjectUrl = (key: string) =>
   `https://${process.env.R2_ACCOUNT_ID!.trim()}.r2.cloudflarestorage.com/${encodeURIComponent(process.env.R2_BUCKET!.trim())}/${key.split("/").map(encodeURIComponent).join("/")}`;
 
 async function r2Put(key: string, buffer: Buffer, contentType: string) {
-  const res = await r2().fetch(r2ObjectUrl(key), {
+  const body = new Uint8Array(buffer);
+  // Sign only, then send the bytes with plain fetch: a signed Request would stream the body without
+  // Content-Length, which R2 rejects (411).
+  const signed = await r2().sign(r2ObjectUrl(key), {
     method: "PUT",
-    body: new Uint8Array(buffer),
+    body,
     headers: { "content-type": contentType, "cache-control": "public, max-age=31536000, immutable" },
   });
+  const res = await fetch(signed.url, { method: "PUT", headers: signed.headers, body });
   if (!res.ok) throw new UploadError(`Сховище R2 відхилило файл (${res.status})`);
   return `${r2PublicBase()}/${key}`;
 }
