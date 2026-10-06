@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { actionError, requireAdmin, type ActionResult } from "@/lib/admin";
 import { invalidateStore } from "@/lib/cache";
 import { slugify } from "@/lib/utils";
+import { regroupCategories } from "@/lib/regroup-categories";
 
 const opt = (max: number) => z.string().trim().max(max).optional().nullable().transform((v) => v || null);
 
@@ -149,4 +150,16 @@ export async function searchProductsForPicker(q: string) {
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true, sku: true, images: { take: 1, orderBy: { position: "asc" }, select: { url: true } } },
   });
+}
+
+/** Moves all products into the store's fixed categories (max 8 groups with product types inside). */
+export async function regroupAllCategories(): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const s = await regroupCategories();
+    invalidateStore();
+    return { ok: true, message: `Готово: ${s.groups.length} категорій, ${s.groups.reduce((n, g) => n + g.types.length, 0)} підкатегорій` };
+  } catch (e) {
+    return actionError(e);
+  }
 }

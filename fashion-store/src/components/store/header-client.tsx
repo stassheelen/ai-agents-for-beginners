@@ -149,7 +149,8 @@ export function HeaderClient({ items, storeName }: { items: NavItem[]; storeName
           onMouseLeave={scheduleClose}
         >
           <div className="container-page grid grid-cols-12 gap-10 py-8">
-            <div className="col-span-8 grid grid-cols-3 gap-10">
+            {/* Many columns (all categories under "Магазин"): wider, four across, no promo. */}
+            <div className={cn("grid gap-x-10 gap-y-8", activeItem.columns.length > 4 || !activeItem.promos.length ? "col-span-12 grid-cols-4" : "col-span-8 grid-cols-3")}>
               {activeItem.columns.map((col) => (
                 <div key={col.title}>
                   <p className="eyebrow mb-3 text-muted-foreground">{col.title}</p>
@@ -166,7 +167,7 @@ export function HeaderClient({ items, storeName }: { items: NavItem[]; storeName
                 </div>
               ))}
             </div>
-            <div className="col-span-4 grid grid-cols-2 gap-4">
+            <div className={cn("col-span-4 grid grid-cols-2 gap-4", (activeItem.columns.length > 4 || !activeItem.promos.length) && "hidden")}>
               {activeItem.promos.map((p) => (
                 <Link key={p.id} href={p.link ?? "/shop"} className={cn("group block", activeItem.promos.length === 1 && "col-span-2 max-w-72 justify-self-end")}>
                   <div className="relative aspect-[4/3] overflow-hidden rounded-[4px] bg-muted">

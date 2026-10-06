@@ -19,8 +19,6 @@ export async function buildNav(): Promise<{ items: NavItem[]; announcements: { i
       ...(uniqueColors.length > MAX_COLORS ? [{ label: "Усі кольори →", href: base }] : []),
     ],
   });
-  const clothing = nav.categories.find((c) => c.slug === "clothing");
-
   const items: NavItem[] = [
     {
       label: "Новинки",
@@ -34,11 +32,13 @@ export async function buildNav(): Promise<{ items: NavItem[]; announcements: { i
             { label: "Нові колекції", href: "/collections" },
           ],
         },
-        { title: "Колекції", links: nav.collections.map((c) => ({ label: c.name, href: `/collections/${c.slug}` })) },
+        ...(nav.collections.length ? [{ title: "Колекції", links: nav.collections.map((c) => ({ label: c.name, href: `/collections/${c.slug}` })) }] : []),
+        colorCol("/shop?flag=new"),
       ],
       promos,
     },
     {
+      // All main categories live here, each with its product types, so the header stays three items wide.
       label: "Магазин",
       href: "/shop",
       columns: [
@@ -47,24 +47,16 @@ export async function buildNav(): Promise<{ items: NavItem[]; announcements: { i
           links: [
             { label: "Усі товари", href: "/shop" },
             { label: "Бестселери", href: "/shop?flag=bestseller" },
-            { label: "Комплекти", href: "/shop/sets" },
             { label: "Розпродаж", href: "/shop?flag=sale" },
           ],
         },
-        ...(clothing ? [{ title: clothing.name, links: clothing.children.map((c) => ({ label: c.name, href: `/shop/${c.slug}` })) }] : []),
-        colorCol("/shop"),
+        ...nav.categories.map<NavColumn>((cat) => ({
+          title: cat.name,
+          links: [{ label: "Переглянути все", href: `/shop/${cat.slug}` }, ...cat.children.map((c) => ({ label: c.name, href: `/shop/${c.slug}` }))],
+        })),
       ],
       promos: promos.slice(0, 1),
     },
-    ...nav.categories.map<NavItem>((cat) => ({
-      label: cat.name,
-      href: `/shop/${cat.slug}`,
-      columns: [
-        { title: cat.name, links: [{ label: "Переглянути все", href: `/shop/${cat.slug}` }, ...cat.children.map((c) => ({ label: c.name, href: `/shop/${c.slug}` }))] },
-        colorCol(`/shop/${cat.slug}`),
-      ],
-      promos: promos.slice(0, 1),
-    })),
     { label: "Розпродаж", href: "/shop?flag=sale", columns: [], promos: [], highlight: true },
   ];
   return { items, announcements: nav.announcements };

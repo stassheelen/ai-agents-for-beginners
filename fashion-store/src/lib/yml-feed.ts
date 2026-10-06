@@ -2,6 +2,7 @@ import "server-only";
 import { SaxesParser } from "saxes";
 import type { Field, ParsedRow } from "@/lib/importer";
 import { assertPublicHttpUrl } from "@/lib/storage";
+import { classifyProduct } from "@/lib/category-groups";
 
 /**
  * Prom.ua / Yandex-style YML product feeds:
@@ -181,14 +182,17 @@ export function parseYml(xml: string): ParsedRow[] {
     // group_id-id keeps variant SKUs unique and stable between feed updates.
     const sku = o.groupId ? `${o.groupId}-${o.id}` : vendorCode && vendorCodeCount.get(vendorCode) === 1 ? vendorCode : o.id;
     const cats = chain(f.categoryid ?? "");
+    const productName = resolved.get(o)?.name ?? stripSize(rawName(o), size);
+    // Supplier categories are mapped onto the store's fixed structure (max 8 groups → product types).
+    const { group, type } = classifyProduct(productName, [...cats].reverse());
     const qty = f.quantity_in_stock ?? f.stock_quantity ?? f.quantity ?? "";
     const stock = o.available === "false" ? "0" : qty.replace(/\D/g, "") || "10";
     const data: Partial<Record<Field, string>> = {
       sku,
       parentSku: o.groupId || undefined,
-      name: resolved.get(o)?.name ?? stripSize(rawName(o), size),
-      category: cats[0],
-      subcategory: cats.length > 1 ? cats[cats.length - 1] : undefined,
+      name: productName,
+      category: group,
+      subcategory: type ?? undefined,
       color: param(COLOR_PARAM) || undefined,
       size: size || undefined,
       price: (f.price ?? "").replace(",", "."),

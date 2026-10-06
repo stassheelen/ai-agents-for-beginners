@@ -10,6 +10,9 @@ import {
 } from "@/lib/storage";
 import { slugify, toMinor } from "@/lib/utils";
 import { parseYml } from "@/lib/yml-feed";
+import { CATEGORY_GROUPS } from "@/lib/category-groups";
+
+const groupIndex = (name: string) => (CATEGORY_GROUPS as readonly string[]).indexOf(name);
 
 /**
  * Bulk product import (CSV / XLSX).
@@ -532,10 +535,7 @@ async function findOrCreateCategory(
   if (cache.has(key)) return cache.get(key)!;
   const slug = slugify(name);
   const existing = await prisma.category.findFirst({
-    where: {
-      OR: [{ name: { equals: name, mode: "insensitive" } }, { slug }],
-      ...(parentId ? { parentId } : {}),
-    },
+    where: { parentId, OR: [{ name: { equals: name, mode: "insensitive" } }, { slug }] },
     select: { id: true },
   });
   let id = existing?.id;
@@ -552,7 +552,8 @@ async function findOrCreateCategory(
       s = `${slug}-${i}`;
     id = (
       await prisma.category.create({
-        data: { name, slug: s, parentId, showInNav: false },
+        // The store's main groups go straight into the header menu, in their fixed order.
+        data: { name, slug: s, parentId, ...(parentId === null && groupIndex(name) >= 0 ? { showInNav: true, position: groupIndex(name) } : { showInNav: false }) },
       })
     ).id;
   }
