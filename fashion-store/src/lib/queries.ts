@@ -472,26 +472,41 @@ export const getHomepageSections = unstable_cache(
 
 export type HomepageSectionData = Awaited<ReturnType<typeof getHomepageSections>>[number];
 
+/** First photo of a listed product, used when a category or collection has no image of its own. */
+const coverProduct = {
+  where: { product: LISTED },
+  take: 1,
+  orderBy: { product: { createdAt: "desc" } },
+  select: { product: { select: { images: { take: 1, orderBy: { position: "asc" }, select: { url: true } } } } },
+} as const;
+const coverOf = (rows: { product: { images: { url: string }[] } }[]) => rows[0]?.product.images[0]?.url ?? null;
+
 export const getCategoryTiles = unstable_cache(
-  async (slugs?: string[]) =>
-    prisma.category.findMany({
-      where: slugs?.length ? { slug: { in: slugs }, published: true } : { published: true, parentId: { not: null }, image: { not: null } },
+  async (slugs?: string[]) => {
+    const rows = await prisma.category.findMany({
+      where: slugs?.length
+        ? { slug: { in: slugs }, published: true }
+        : { published: true, parentId: { not: null }, OR: [{ image: { not: null } }, { products: { some: { product: LISTED } } }] },
       orderBy: { position: "asc" },
       take: 8,
-      select: { id: true, name: true, slug: true, image: true },
-    }),
+      select: { id: true, name: true, slug: true, image: true, products: coverProduct },
+    });
+    return rows.map(({ products, ...c }) => ({ ...c, image: c.image ?? coverOf(products) })).filter((c) => c.image);
+  },
   ["category-tiles"],
   CACHE,
 );
 
 export const getCollectionTiles = unstable_cache(
-  async () =>
-    prisma.collection.findMany({
-      where: { published: true },
+  async () => {
+    const rows = await prisma.collection.findMany({
+      where: { published: true, OR: [{ heroImage: { not: null } }, { products: { some: { product: LISTED } } }] },
       orderBy: { position: "asc" },
       take: 6,
-      select: { id: true, name: true, slug: true, heroImage: true, description: true },
-    }),
+      select: { id: true, name: true, slug: true, heroImage: true, description: true, products: coverProduct },
+    });
+    return rows.map(({ products, ...c }) => ({ ...c, heroImage: c.heroImage ?? coverOf(products) }));
+  },
   ["collection-tiles"],
   CACHE,
 );

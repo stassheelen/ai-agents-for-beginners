@@ -5,6 +5,7 @@ import type { Prisma, ProductStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { actionError, requireAdmin, type ActionResult } from "@/lib/admin";
 import { invalidateStore } from "@/lib/cache";
+import { removeDemoContent } from "@/lib/demo-content";
 import { slugify } from "@/lib/utils";
 
 const money = z.coerce.number().int().min(0).max(1_000_000_000);
@@ -228,6 +229,17 @@ export async function deleteEmptyProducts(): Promise<ActionResult> {
     const { count } = await prisma.product.deleteMany({ where: EMPTY_PRODUCT });
     invalidateStore();
     return { ok: true, message: count ? `Видалено порожніх товарів: ${count}` : "Порожніх товарів немає" };
+  } catch (e) {
+    return actionError(e);
+  }
+}
+
+export async function deleteDemoContent(): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const s = await removeDemoContent();
+    invalidateStore();
+    return { ok: true, message: `Демо-дані видалено: товарів ${s.products}, замовлень ${s.orders}, банерів ${s.banners}` };
   } catch (e) {
     return actionError(e);
   }
