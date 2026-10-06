@@ -43,7 +43,7 @@ export async function RenderSection({ section, index }: { section: HomepageSecti
     case "PRODUCT_CAROUSEL":
     case "PRODUCT_GRID": {
       // "Новинки" carousel: 8 cards that scroll by themselves.
-      const autoplay = section.type === "PRODUCT_CAROUSEL" && (c.autoplay ?? c.source === "new");
+      const autoplay = section.type === "PRODUCT_CAROUSEL" && (c.autoplay ?? (c.source === "new" || /новинк/i.test(section.title ?? "")));
       const products = await getProductsBySource(c.source ?? "latest", autoplay ? 8 : (c.limit ?? 8), c.slug);
       if (!products.length) return null;
       return (
