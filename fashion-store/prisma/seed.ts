@@ -417,7 +417,7 @@ async function main() {
     console.log(`Catalogue already has ${existing} products — skipping demo data (set SEED_RESET=1 to reload).`);
     return;
   }
-  if (existing > 0) await reset();
+  if (existing > 0 || process.env.SEED_RESET === "1") await reset();
   await seedCatalog();
 }
 
