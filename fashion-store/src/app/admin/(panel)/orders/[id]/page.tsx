@@ -8,12 +8,13 @@ import { OrderEditor } from "@/components/admin/order-editor";
 import { OrderStatusBadge, PaymentBadge } from "@/components/admin/status";
 import { DELIVERY_METHODS } from "@/lib/providers/delivery";
 import { formatDate, formatMoney } from "@/lib/utils";
+import { SupplierLine } from "@/components/admin/supplier-line";
 
 export const metadata = { title: "Замовлення" };
 
 export default async function OrderPage(props: PageProps<"/admin/orders/[id]">) {
   const { id } = await props.params;
-  const o = await prisma.order.findUnique({ where: { id }, include: { items: true, customer: { select: { id: true, ordersCount: true } } } });
+  const o = await prisma.order.findUnique({ where: { id }, include: { items: { include: { product: { select: { supplier: true, supplierSku: true, supplierUrl: true } } } }, customer: { select: { id: true, ordersCount: true } } } });
   if (!o) notFound();
   return (
     <>
@@ -47,6 +48,7 @@ export default async function OrderPage(props: PageProps<"/admin/orders/[id]">) 
                     <p className="text-[11px] text-muted-foreground">
                       {i.sku} · {[i.color, i.size].filter(Boolean).join(" / ")}
                     </p>
+                    <SupplierLine item={i} product={i.product} />
                   </div>
                   <p className="w-28 text-right text-muted-foreground">
                     {formatMoney(i.unitPrice, o.currency)} × {i.quantity}

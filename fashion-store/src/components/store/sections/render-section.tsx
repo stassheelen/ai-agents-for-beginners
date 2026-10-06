@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   getCategoryTiles,
@@ -76,11 +77,19 @@ export async function RenderSection({ section, index }: { section: HomepageSecti
             style={{ "--cols": perRow } as React.CSSProperties}
           >
             {tiles.map((t, i) => (
-              <Link key={t.id} href={`/shop/${t.slug}`} className="group block">
-                <div className={cn("relative aspect-[4/5] overflow-hidden rounded-[4px] bg-muted", perRow <= 3 && "md:aspect-square")}>
+              <Link
+                key={t.id}
+                href={`/shop/${t.slug}`}
+                className="group block rounded-[6px] transition-[transform,box-shadow] duration-500 ease-out hover:-translate-y-1 hover:shadow-[0_22px_40px_-24px_rgba(0,0,0,0.45)] focus-visible:-translate-y-1"
+              >
+                <div className={cn("relative aspect-[4/5] overflow-hidden rounded-[6px] bg-muted", perRow <= 3 && "md:aspect-square")}>
                   <RotatingImage images={t.images} alt={t.name} offset={i * 600} sizes={`(min-width:768px) ${Math.round(100 / perRow)}vw, 50vw`} />
+                  {/* Name on the card: frosted glass, like the product captions */}
+                  <div className="absolute inset-x-2 bottom-2 flex items-center justify-between gap-2 rounded-[10px] border border-white/50 bg-white/55 px-3 py-2.5 shadow-[0_10px_30px_-14px_rgba(0,0,0,0.35)] backdrop-blur-md backdrop-saturate-150 sm:inset-x-3 sm:bottom-3 sm:px-4 sm:py-3">
+                    <span className="font-display text-[10px] font-medium uppercase leading-tight tracking-[0.04em] sm:text-[13px] sm:tracking-[0.08em]">{t.name}</span>
+                    <ArrowUpRight className="size-4 shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" strokeWidth={1.5} />
+                  </div>
                 </div>
-                <p className="mt-3 text-[12px] font-medium uppercase tracking-[0.12em]">{t.name}</p>
               </Link>
             ))}
           </div>

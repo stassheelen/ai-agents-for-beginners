@@ -31,7 +31,7 @@ export function RotatingImage({ images, alt, sizes, interval = 4000, offset = 0 
           fill
           sizes={sizes}
           className={cn(
-            "object-cover transition-[opacity,transform] duration-1000 ease-out group-hover:scale-[1.03]",
+            "object-cover transition-[opacity,transform] duration-1000 ease-out group-hover:scale-[1.08]",
             i === index ? "opacity-100" : "opacity-0",
           )}
         />

@@ -24,6 +24,9 @@ export async function POST(req: Request) {
     if (typeof feedUrl === "string" && feedUrl.trim()) {
       // XML / YML feed by link (e.g. a supplier's Prom feed): fetched server-side.
       parsed = parseFeedText(await fetchFeed(feedUrl));
+      // Feeds without a shop name: the feed's site is the supplier.
+      const host = new URL(feedUrl.trim()).hostname.replace(/^www\./, "");
+      for (const r of parsed.rows) r.data.supplier ??= host;
     } else {
       if (!(file instanceof File)) return Response.json({ error: "Файл не завантажено" }, { status: 400 });
       if (file.size > MAX_FILE) return Response.json({ error: "Файл більше 10 МБ" }, { status: 400 });

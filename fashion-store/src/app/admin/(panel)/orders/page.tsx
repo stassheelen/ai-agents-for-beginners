@@ -9,6 +9,7 @@ import { ExpandableRow } from "@/components/admin/expandable-row";
 import { DELIVERY_METHODS } from "@/lib/providers/delivery";
 import { Card, EmptyState, Table, TD, TH, THead } from "@/components/ui/misc";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
+import { SupplierLine } from "@/components/admin/supplier-line";
 
 export const metadata = { title: "Замовлення" };
 const PER_PAGE = 30;
@@ -42,7 +43,7 @@ export default async function OrdersPage(props: PageProps<"/admin/orders">) {
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
-      include: { items: true },
+      include: { items: { include: { product: { select: { supplier: true, supplierSku: true, supplierUrl: true } } } } },
     }),
     prisma.order.groupBy({ by: ["status"], _count: true }),
   ]);
@@ -119,7 +120,7 @@ export default async function OrdersPage(props: PageProps<"/admin/orders">) {
   );
 }
 
-type OrderWithItems = Prisma.OrderGetPayload<{ include: { items: true } }>;
+type OrderWithItems = Prisma.OrderGetPayload<{ include: { items: { include: { product: { select: { supplier: true, supplierSku: true, supplierUrl: true } } } } } }>;
 
 function OrderQuickView({ order: o }: { order: OrderWithItems }) {
   const delivery = DELIVERY_METHODS.find((d) => d.id === o.deliveryMethod)?.label ?? o.deliveryMethod;
@@ -136,6 +137,7 @@ function OrderQuickView({ order: o }: { order: OrderWithItems }) {
                 <p className="text-[11px] text-muted-foreground">
                   {[i.color, i.size && `розмір ${i.size}`].filter(Boolean).join(" · ")} · {i.sku}
                 </p>
+                <SupplierLine item={i} product={i.product} />
               </div>
               <div className="text-right sm:flex sm:items-center sm:gap-4">
                 <p className="whitespace-nowrap text-[11px] text-muted-foreground sm:text-sm">

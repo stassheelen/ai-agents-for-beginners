@@ -52,6 +52,9 @@ export const IMPORT_COLUMNS = [
   "Рекомендований",
   "Новинка",
   "Бестселер",
+  "Постачальник",
+  "Артикул постачальника",
+  "Посилання постачальника",
 ] as const;
 
 export type Field =
@@ -80,7 +83,10 @@ export type Field =
   | "seoDescription"
   | "featured"
   | "isNew"
-  | "bestSeller";
+  | "bestSeller"
+  | "supplier"
+  | "supplierSku"
+  | "supplierUrl";
 
 const ALIASES: Record<Field, string[]> = {
   sku: ["sku", "variantsku", "артикул", "артикулваріанту", "код"],
@@ -131,6 +137,9 @@ const ALIASES: Record<Field, string[]> = {
   featured: ["featured", "рекомендований"],
   isNew: ["new", "isnew", "новинка"],
   bestSeller: ["bestseller", "bestsellers", "бестселер"],
+  supplier: ["supplier", "vendor", "постачальник", "поставщик"],
+  supplierSku: ["suppliersku", "vendorsku", "vendorcode", "артикулпостачальника", "артикулпоставщика"],
+  supplierUrl: ["supplierurl", "vendorurl", "посиланняпостачальника", "посиланнянатоварпостачальника"],
 };
 
 const norm = (h: string) => h.toLowerCase().replace(/[^a-zа-яіїєґ0-9]/gi, "");
@@ -895,6 +904,9 @@ export async function commitImport(
         ...(pick("material") ? { material: pick("material") } : {}),
         ...(pick("care") ? { careInstructions: pick("care") } : {}),
         ...(pick("brand") ? { brand: pick("brand") } : {}),
+        ...(pick("supplier") ? { supplier: pick("supplier") } : {}),
+        ...(pick("supplierSku") ? { supplierSku: pick("supplierSku") } : {}),
+        ...(pick("supplierUrl") ? { supplierUrl: pick("supplierUrl") } : {}),
         ...(pick("seoTitle") ? { seoTitle: pick("seoTitle") } : {}),
         ...(pick("seoDescription")
           ? { seoDescription: pick("seoDescription") }

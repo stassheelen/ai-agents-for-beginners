@@ -128,6 +128,8 @@ export function parseYml(xml: string): ParsedRow[] {
   let offer: Offer | null = null;
   let category: { id: string; parentId: string } | null = null;
   let paramName = "";
+  // <shop><name>/<company>/<url> name the supplier for every product.
+  const shop: Record<string, string> = {};
 
   parser.on("opentag", (tag) => {
     const name = tag.name.toLowerCase();
@@ -150,6 +152,8 @@ export function parseYml(xml: string): ParsedRow[] {
     } else if (name === "offer" && offer) {
       offers.push(offer);
       offer = null;
+    } else if (!offer && stack[stack.length - 1] === "shop" && ["name", "company", "url"].includes(name)) {
+      shop[name] = value;
     } else if (offer) {
       if (name === "picture") {
         if (value) offer.pictures.push(value);
@@ -173,6 +177,14 @@ export function parseYml(xml: string): ParsedRow[] {
   const vendorCodeCount = new Map<string, number>();
   for (const o of offers) if (o.fields.vendorcode) vendorCodeCount.set(o.fields.vendorcode, (vendorCodeCount.get(o.fields.vendorcode) ?? 0) + 1);
 
+  const supplierName = (() => {
+    if (shop.name || shop.company) return shop.name || shop.company;
+    try {
+      return shop.url ? new URL(shop.url).hostname.replace(/^www\./, "") : "";
+    } catch {
+      return "";
+    }
+  })();
   const rawName = (o: Offer) => o.fields.name_ua || o.fields.name || o.fields.model || "";
   const groups = new Map<string, Offer[]>();
   for (const o of offers) if (o.groupId) groups.set(o.groupId, [...(groups.get(o.groupId) ?? []), o]);
@@ -210,6 +222,9 @@ export function parseYml(xml: string): ParsedRow[] {
       images: o.pictures.join(" ") || undefined,
       status: "published",
       brand: f.vendor || undefined,
+      supplier: supplierName || undefined,
+      supplierSku: vendorCode || o.groupId || o.id || undefined,
+      supplierUrl: f.url || undefined,
       material: param(MATERIAL_PARAM) || undefined,
       tags: f.keywords_ua || f.keywords || undefined,
     };

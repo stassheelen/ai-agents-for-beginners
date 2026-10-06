@@ -110,6 +110,10 @@ model Product {
   description      String?
   shortDescription String?
   brand            String?
+  /// Where the product is bought from (dropshipping / restocking): name, the supplier's article and product page.
+  supplier         String?
+  supplierSku      String?
+  supplierUrl      String?
 
   categoryId    String?
   category      Category? @relation("PrimaryCategory", fields: [categoryId], references: [id], onDelete: SetNull)
@@ -311,6 +315,10 @@ model OrderItem {
   unitPrice Int
   quantity  Int
   total     Int
+  /// Supplier details copied from the product when the order was placed.
+  supplier    String?
+  supplierSku String?
+  supplierUrl String?
 
   @@index([orderId])
   @@index([productId])

@@ -130,6 +130,15 @@ export async function placeOrder(input: CheckoutInput): Promise<CheckoutResult> 
           });
           if (upd.count === 0) throw new StockError("Промокод більше не доступний");
         }
+        // Supplier details are copied onto the order lines so they survive product edits or deletion.
+        const suppliers = new Map(
+          (
+            await tx.product.findMany({
+              where: { id: { in: cart.items.map((l) => l.productId).filter((id): id is string => Boolean(id)) } },
+              select: { id: true, supplier: true, supplierSku: true, supplierUrl: true },
+            })
+          ).map(({ id, ...s }) => [id, s] as const),
+        );
         const created = await tx.order.create({
           data: {
             customerId: customer.id,
@@ -152,6 +161,7 @@ export async function placeOrder(input: CheckoutInput): Promise<CheckoutResult> 
             comment: data.comment || null,
             items: {
               create: cart.items.map((l) => ({
+                ...suppliers.get(l.productId),
                 productId: l.productId,
                 variantId: l.variantId,
                 name: l.name,
