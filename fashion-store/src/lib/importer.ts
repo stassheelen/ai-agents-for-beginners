@@ -3,7 +3,7 @@ import Papa from "papaparse";
 import ExcelJS from "exceljs";
 import type { Prisma, ProductStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { importRemoteFile } from "@/lib/storage";
+import { assertPublicHttpUrl, importRemoteFile } from "@/lib/storage";
 import { slugify, toMinor } from "@/lib/utils";
 import { parseYml } from "@/lib/yml-feed";
 
@@ -456,7 +456,18 @@ const GROUP_CONCURRENCY = 3;
 /** Product groups per chunked request: small enough to finish well inside the function time limit. */
 export const IMPORT_CHUNK_SIZE = 25;
 
-/** Downloads every distinct remote image once, in parallel. Returns url → stored url (missing when it failed). */
+/** Remote photos are linked as-is by default; IMPORT_COPY_IMAGES=1 copies them into our storage instead. */
+const COPY_IMAGES = process.env.IMPORT_COPY_IMAGES === "1";
+
+/** Supplier photo URL as shown on the site: public host only, served over https (no mixed content). */
+function linkedImageUrl(raw: string) {
+  const url = new URL(raw);
+  assertPublicHttpUrl(url);
+  url.protocol = "https:";
+  return url.href;
+}
+
+/** Resolves every distinct image once. Returns url → url to save (missing when it failed). */
 async function prefetchImages(groupRows: ParsedRow[][], warn: (row: ParsedRow, w: string) => void) {
   const stored = new Map<string, string>();
   const jobs = new Map<string, { url: string; alt: string; row: ParsedRow }>();
@@ -470,7 +481,7 @@ async function prefetchImages(groupRows: ParsedRow[][], warn: (row: ParsedRow, w
   }
   await eachLimit([...jobs.values()], IMAGE_CONCURRENCY, async (job) => {
     try {
-      stored.set(job.url, (await importRemoteFile(job.url, job.alt)).url);
+      stored.set(job.url, COPY_IMAGES ? (await importRemoteFile(job.url, job.alt)).url : linkedImageUrl(job.url));
     } catch (e) {
       warn(job.row, `Фото не імпортовано (${job.url}): ${e instanceof Error ? e.message : "помилка"}`);
     }
@@ -614,12 +625,14 @@ export async function commitImport(rows: ParsedRow[], opts: { chunk?: number } =
           for (const id of catIds) await tx.productCategory.upsert({ where: { productId_categoryId: { productId: product.id, categoryId: id } }, update: {}, create: { productId: product.id, categoryId: id } });
           for (const id of collectionIds) await tx.productCollection.upsert({ where: { productId_collectionId: { productId: product.id, collectionId: id } }, update: {}, create: { productId: product.id, collectionId: id } });
 
-          // images (append new ones)
+          // images: the file's list replaces the product's photos (keeps re-imports in sync with the supplier)
           if (imageRows.length) {
-            const have = await tx.productImage.findMany({ where: { productId: product.id }, select: { url: true, position: true } });
-            let pos = have.reduce((m, i) => Math.max(m, i.position + 1), 0);
-            const fresh = imageRows.filter((i) => !have.some((h) => h.url === i.url));
-            if (fresh.length) await tx.productImage.createMany({ data: fresh.map((i) => ({ productId: product.id, url: i.url, colorName: i.colorName, alt: first.name!, position: pos++ })) });
+            const have = await tx.productImage.findMany({ where: { productId: product.id }, orderBy: { position: "asc" }, select: { url: true } });
+            const same = have.length === imageRows.length && have.every((h, i) => h.url === imageRows[i].url);
+            if (!same) {
+              await tx.productImage.deleteMany({ where: { productId: product.id } });
+              await tx.productImage.createMany({ data: imageRows.map((i, pos) => ({ productId: product.id, url: i.url, colorName: i.colorName, alt: first.name!, position: pos })) });
+            }
           }
 
           // variants

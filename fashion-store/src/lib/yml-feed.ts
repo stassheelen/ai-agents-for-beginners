@@ -26,6 +26,11 @@ const MATERIAL_PARAM = /^(склад|состав|матеріал|матери�
 
 function htmlToText(html: string) {
   return html
+    .replace(/<(style|script)[^>]*>[\s\S]*?<\/\1>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    // table cells → "a | b | c" lines (size charts)
+    .replace(/<\/t[dh]>\s*(?=<t[dh][\s>])/gi, " | ")
+    .replace(/<\/tr>/gi, "\n")
     .replace(/<\s*br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|li|h\d)>/gi, "\n")
     .replace(/<li[^>]*>/gi, "• ")
