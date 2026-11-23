@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/admin/shell";
 import { Button } from "@/components/ui/button";
 import { ProductsTable } from "@/components/admin/products-table";
-import { AdminFilters } from "@/components/admin/filters";
+import { AdminFilters, MoreActions } from "@/components/admin/filters";
 import { DeleteBrokenPhotoProducts, DeleteEmptyProducts, RoundPricesButton } from "@/components/admin/delete-empty-products";
 import { countUnroundedPrices } from "@/lib/round-prices";
 import { DeleteDemoContent } from "@/components/admin/delete-demo-content";
@@ -106,20 +106,22 @@ export default async function ProductsPage(props: PageProps<"/admin/products">) 
         description={`${total} товарів${brokenCount ? ` · зі зламаними фото: ${brokenCount}` : ""}`}
         actions={
           <>
-            <RoundPricesButton count={unrounded} />
-            <DeleteDemoContent summary={demo} />
-            {content === "broken-photo" && <DeleteBrokenPhotoProducts count={brokenCount} />}
-            <DeleteEmptyProducts count={emptyCount} />
-            <Button asChild variant="outline" size="sm">
-              <Link href="/admin/products/import">
-                <FileSpreadsheet /> Імпорт CSV / XLSX
-              </Link>
-            </Button>
-            <Button asChild size="sm">
+            <Button asChild size="sm" className="md:order-last">
               <Link href="/admin/products/new">
                 <Plus /> Додати товар
               </Link>
             </Button>
+            <MoreActions>
+              <RoundPricesButton count={unrounded} />
+              <DeleteDemoContent summary={demo} />
+              {content === "broken-photo" && <DeleteBrokenPhotoProducts count={brokenCount} />}
+              <DeleteEmptyProducts count={emptyCount} />
+              <Button asChild variant="outline" size="sm">
+                <Link href="/admin/products/import">
+                  <FileSpreadsheet /> Імпорт CSV / XLSX
+                </Link>
+              </Button>
+            </MoreActions>
           </>
         }
       />

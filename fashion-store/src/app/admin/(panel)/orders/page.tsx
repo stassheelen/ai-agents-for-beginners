@@ -71,47 +71,74 @@ export default async function OrdersPage(props: PageProps<"/admin/orders">) {
           <EmptyState title="Замовлень немає" description="Тут зʼявляться замовлення з магазину." />
         ) : (
           <>
-            <Table>
-              <THead>
-                <tr>
-                  <TH className="w-8 pl-3"><span className="sr-only">Деталі</span></TH>
-                  <TH>№</TH>
-                  <TH>Дата</TH>
-                  <TH>Клієнт</TH>
-                  <TH className="text-right">Товарів</TH>
-                  <TH className="text-right">Сума</TH>
-                  <TH>Оплата</TH>
-                  <TH>Статус</TH>
-                </tr>
-              </THead>
-              <tbody>
-                {orders.map((o) => (
-                  <ExpandableRow key={o.id} colSpan={7} details={<OrderQuickView order={o} />}>
-                    <TD>
-                      <Link href={`/admin/orders/${o.id}`} className="font-medium hover:underline">
-                        #{o.number}
-                      </Link>
-                    </TD>
-                    <TD className="whitespace-nowrap text-muted-foreground">{formatDate(o.createdAt, true)}</TD>
-                    <TD>
-                      <p>
-                        {o.firstName} {o.lastName}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">{o.email}</p>
-                    </TD>
-                    <TD className="text-right">{o.items.reduce((a, i) => a + i.quantity, 0)}</TD>
-                    <TD className="text-right">{formatMoney(o.total, o.currency)}</TD>
-                    <TD>
-                      <p className="text-[11px] text-muted-foreground">{o.paymentMethod === "cod" ? "Накладений платіж" : `Картка · ${o.paymentProvider === "manual" ? "рахунок" : o.paymentProvider}`}</p>
-                      <PaymentBadge status={o.paymentStatus} />
-                    </TD>
-                    <TD>
+            {/* Phones: one tappable card per order instead of a table that scrolls sideways. */}
+            <ul className="divide-y divide-border md:hidden">
+              {orders.map((o) => (
+                <li key={o.id}>
+                  <Link href={`/admin/orders/${o.id}`} className="block px-3 py-3 active:bg-muted">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium">#{o.number}</span>
                       <OrderStatusBadge status={o.status} />
-                    </TD>
-                  </ExpandableRow>
-                ))}
-              </tbody>
-            </Table>
+                    </div>
+                    <div className="mt-1 flex items-baseline justify-between gap-3">
+                      <span className="truncate">
+                        {o.firstName} {o.lastName}
+                      </span>
+                      <span className="whitespace-nowrap font-medium">{formatMoney(o.total, o.currency)}</span>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                      <span>{formatDate(o.createdAt, true)}</span>
+                      <span>{o.items.reduce((a, i) => a + i.quantity, 0)} шт.</span>
+                      <span>{o.paymentMethod === "cod" ? "Накладений платіж" : "Картка"}</span>
+                      <PaymentBadge status={o.paymentStatus} />
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden md:block">
+              <Table>
+                <THead>
+                  <tr>
+                    <TH className="w-8 pl-3"><span className="sr-only">Деталі</span></TH>
+                    <TH>№</TH>
+                    <TH>Дата</TH>
+                    <TH>Клієнт</TH>
+                    <TH className="text-right">Товарів</TH>
+                    <TH className="text-right">Сума</TH>
+                    <TH>Оплата</TH>
+                    <TH>Статус</TH>
+                  </tr>
+                </THead>
+                <tbody>
+                  {orders.map((o) => (
+                    <ExpandableRow key={o.id} colSpan={7} details={<OrderQuickView order={o} />}>
+                      <TD>
+                        <Link href={`/admin/orders/${o.id}`} className="font-medium hover:underline">
+                          #{o.number}
+                        </Link>
+                      </TD>
+                      <TD className="whitespace-nowrap text-muted-foreground">{formatDate(o.createdAt, true)}</TD>
+                      <TD>
+                        <p>
+                          {o.firstName} {o.lastName}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">{o.email}</p>
+                      </TD>
+                      <TD className="text-right">{o.items.reduce((a, i) => a + i.quantity, 0)}</TD>
+                      <TD className="text-right">{formatMoney(o.total, o.currency)}</TD>
+                      <TD>
+                        <p className="text-[11px] text-muted-foreground">{o.paymentMethod === "cod" ? "Накладений платіж" : `Картка · ${o.paymentProvider === "manual" ? "рахунок" : o.paymentProvider}`}</p>
+                        <PaymentBadge status={o.paymentStatus} />
+                      </TD>
+                      <TD>
+                        <OrderStatusBadge status={o.status} />
+                      </TD>
+                    </ExpandableRow>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
             <Pagination page={page} pages={Math.max(1, Math.ceil(total / PER_PAGE))} />
           </>
         )}
