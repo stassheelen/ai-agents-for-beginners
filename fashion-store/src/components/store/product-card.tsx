@@ -35,6 +35,9 @@ export function ProductCard({
   ].filter(Boolean) as { label: string; tone: "light" | "dark" | "sale" }[];
   const shownColor = (swatchImage && product.colors.find((c) => c.image === swatchImage)) || product.colors[0];
 
+  // Photos fade in once loaded instead of popping in line by line; above-the-fold (priority) ones show at once.
+  const [imageReady, setImageReady] = React.useState(Boolean(priority));
+
   return (
     <article className="group/card relative flex flex-col">
       <div className="relative aspect-[3/4] overflow-hidden rounded-[4px] bg-muted sm:aspect-[4/5]">
@@ -47,7 +50,8 @@ export function ProductCard({
                 fill
                 sizes={sizes}
                 priority={priority}
-                className={cn("object-cover transition-opacity duration-500", secondary && "lg:group-hover/card:opacity-0")}
+                onLoad={() => setImageReady(true)}
+                className={cn("object-cover transition-opacity duration-500", imageReady ? "opacity-100" : "opacity-0", secondary && "lg:group-hover/card:opacity-0")}
               />
             )}
             {secondary && (

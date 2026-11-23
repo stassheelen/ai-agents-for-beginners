@@ -208,3 +208,34 @@ a:hover > .logo-shine {
     animation: none;
   }
 }
+
+/* Route changes: the page body fades out quickly and the new one rises in (React <ViewTransition> in the store layout).
+   The rest of the window (header, announcement bar) is the same on both sides, so it is not animated. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-old(.page-fade) {
+  animation: 140ms cubic-bezier(0.4, 0, 1, 1) both vt-fade-out;
+}
+::view-transition-new(.page-fade) {
+  animation: 320ms cubic-bezier(0.22, 0.61, 0.36, 1) 60ms both vt-fade-in;
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

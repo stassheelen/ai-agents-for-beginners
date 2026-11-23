@@ -5,6 +5,7 @@ import { RenderSection } from "@/components/store/sections/render-section";
 import { OrganizationJsonLd } from "@/components/store/json-ld";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_OG_IMAGE } from "@/lib/seo";
+import { Reveal } from "@/components/store/reveal";
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
@@ -35,9 +36,11 @@ export default async function HomePage() {
           {!sections.some((s) => s.type === "HERO" && s.title) && (
             <h1 className="sr-only">{settings.seoTitle ?? settings.storeName}</h1>
           )}
-          {sections.map((s, i) => (
-            <RenderSection key={s.id} section={s} index={i} />
-          ))}
+          <Reveal>
+            {sections.map((s, i) => (
+              <RenderSection key={s.id} section={s} index={i} />
+            ))}
+          </Reveal>
         </>
       )}
     </>
