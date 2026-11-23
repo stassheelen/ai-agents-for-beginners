@@ -286,19 +286,19 @@ a:hover > .logo-shine {
 .bg-blob-1 {
   top: -25vmax;
   left: -20vmax;
-  background: radial-gradient(closest-side, rgb(233 196 186 / 0.55), transparent);
+  background: radial-gradient(closest-side, rgb(228 176 162 / 0.85), transparent);
   animation: blob-float-1 26s ease-in-out infinite alternate;
 }
 .bg-blob-2 {
   top: 10vmax;
   right: -28vmax;
-  background: radial-gradient(closest-side, rgb(190 197 160 / 0.5), transparent);
+  background: radial-gradient(closest-side, rgb(176 186 136 / 0.8), transparent);
   animation: blob-float-2 32s ease-in-out infinite alternate;
 }
 .bg-blob-3 {
   bottom: -35vmax;
   left: 15vmax;
-  background: radial-gradient(closest-side, rgb(230 214 186 / 0.6), transparent);
+  background: radial-gradient(closest-side, rgb(226 202 160 / 0.9), transparent);
   animation: blob-float-3 29s ease-in-out infinite alternate;
 }
 @keyframes blob-float-1 {
