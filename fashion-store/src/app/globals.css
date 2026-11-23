@@ -267,3 +267,52 @@ a:hover > .logo-shine {
 .bg-wordmark-row[data-dir="right"] {
   transform: translate3d(calc(var(--sy) * 0.06px), 0, 0);
 }
+
+/* Colour glows under the wordmark: a viewport-tall sticky layer with three large radial gradients
+   (no CSS blur filter, so it stays cheap) that float slowly. */
+.bg-blobs {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  margin-bottom: -100svh;
+}
+.bg-blob {
+  position: absolute;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  will-change: transform;
+}
+.bg-blob-1 {
+  top: -25vmax;
+  left: -20vmax;
+  background: radial-gradient(closest-side, rgb(233 196 186 / 0.55), transparent);
+  animation: blob-float-1 26s ease-in-out infinite alternate;
+}
+.bg-blob-2 {
+  top: 10vmax;
+  right: -28vmax;
+  background: radial-gradient(closest-side, rgb(190 197 160 / 0.5), transparent);
+  animation: blob-float-2 32s ease-in-out infinite alternate;
+}
+.bg-blob-3 {
+  bottom: -35vmax;
+  left: 15vmax;
+  background: radial-gradient(closest-side, rgb(230 214 186 / 0.6), transparent);
+  animation: blob-float-3 29s ease-in-out infinite alternate;
+}
+@keyframes blob-float-1 {
+  to {
+    transform: translate3d(18vw, 14vh, 0) scale(1.15);
+  }
+}
+@keyframes blob-float-2 {
+  to {
+    transform: translate3d(-22vw, 18vh, 0) scale(0.9);
+  }
+}
+@keyframes blob-float-3 {
+  to {
+    transform: translate3d(12vw, -20vh, 0) scale(1.1);
+  }
+}

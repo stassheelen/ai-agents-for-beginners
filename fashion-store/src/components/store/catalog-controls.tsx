@@ -341,7 +341,7 @@ export function CatalogToolbar({ total, facets, hide }: { total: number; facets:
   );
   return (
     <>
-      <div className="sticky top-14 z-20 -mx-4 border-b border-border/70 bg-white px-4 md:-mx-6 md:px-6 lg:top-16 lg:mx-0 lg:px-0">
+      <div className="sticky top-14 z-20 -mx-4 border-b border-border/70 bg-white/40 backdrop-blur-md backdrop-saturate-150 px-4 md:-mx-6 md:px-6 lg:top-16 lg:mx-0 lg:px-0">
         <div className="flex h-14 items-center justify-between gap-4">
           {/* Mobile */}
           <div className="flex items-center gap-3 lg:hidden">
