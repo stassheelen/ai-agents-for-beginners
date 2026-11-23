@@ -9,7 +9,7 @@ export async function generateMetadata(props: PageProps<"/shop">): Promise<Metad
   const flag = typeof sp.flag === "string" ? FLAG_TITLES[sp.flag] : undefined;
   return {
     title: flag ?? "Усі товари",
-    description: "Каталог VELLA: activewear, худі, світшоти, легінси та аксесуари.",
+    description: "Каталог жіночого одягу VELLA: пуховики, пальта, светри, худі, джинси, шкіряні сумки та взуття. Доставка по Україні.",
     alternates: { canonical: flag ? `/shop?flag=${sp.flag}${pageSuffix(sp, "&")}` : `/shop${pageSuffix(sp)}` },
   };
 }

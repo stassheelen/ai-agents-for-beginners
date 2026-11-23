@@ -59,7 +59,12 @@ type ProductSeoInput = {
 export function productSeoTitle(p: ProductSeoInput) {
   const custom = p.seoTitle?.trim();
   if (custom && !custom.includes("|") && !mentionsAny(custom, [p.brand, p.supplier])) return withoutStoreSuffix(custom);
-  return p.name;
+  // "Aurora — Noir, сумки — купити онлайн": the category and buying intent are what people search for.
+  // The category is skipped when the name already says it ("Худі на блискавці", category "Худі").
+  const category = (p.subcategory ?? p.category)?.name.toLowerCase();
+  const stem = category?.split(/\s+/)[0].slice(0, 4);
+  const showCategory = category && stem && !p.name.toLowerCase().includes(stem);
+  return `${p.name}${showCategory ? `, ${category}` : ""} — купити онлайн`;
 }
 
 /**

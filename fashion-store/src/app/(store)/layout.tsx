@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     siteName: "VELLA",
     locale: "uk_UA",
     type: "website",
-    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: "VELLA — сучасний activewear та базовий гардероб" }],
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: "VELLA — Твій стиль. Твій ритм." }],
   },
   // Large preview cards (Telegram, X, Viber) instead of a small square thumbnail.
   twitter: { card: "summary_large_image" },

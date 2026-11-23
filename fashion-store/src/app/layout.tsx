@@ -9,7 +9,7 @@ const display = Unbounded({ variable: "--font-display", subsets: ["latin", "cyri
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: { default: "VELLA", template: "%s — VELLA" },
-  description: "Преміальний activewear та базовий гардероб",
+  description: "Сучасний жіночий одяг, взуття та аксесуари з доставкою по Україні",
   // Google Search Console "HTML tag" verification: set GOOGLE_SITE_VERIFICATION to the content="…" value.
   ...(process.env.GOOGLE_SITE_VERIFICATION ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } } : {}),
 };
