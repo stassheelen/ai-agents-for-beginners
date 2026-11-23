@@ -12,7 +12,14 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { absolute: s.seoTitle ?? s.storeName },
     description: s.seoDescription ?? undefined,
-    openGraph: { title: s.seoTitle ?? s.storeName, description: s.seoDescription ?? undefined, images: [s.ogImage ?? DEFAULT_OG_IMAGE], type: "website" },
+    openGraph: {
+      title: s.seoTitle ?? s.storeName,
+      description: s.seoDescription ?? undefined,
+      // The demo seed stored its placeholder image here; the branded card replaces it.
+      images: [s.ogImage && s.ogImage !== "/demo/og-default.webp" ? s.ogImage : DEFAULT_OG_IMAGE],
+      type: "website",
+    },
+    twitter: { card: "summary_large_image" },
     alternates: { canonical: "/" },
   };
 }

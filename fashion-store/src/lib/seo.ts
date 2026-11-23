@@ -1,7 +1,7 @@
 import { formatMoney } from "@/lib/utils";
 
-/** Share image used when a page has none of its own (Telegram, Viber, Facebook previews). */
-export const DEFAULT_OG_IMAGE = "/demo/og-default.webp";
+/** Link-preview card (1200×630, VELLA wordmark on the site's colour glows) for pages without their own image. */
+export const DEFAULT_OG_IMAGE = "/og.jpg";
 
 const DESCRIPTION_MAX = 160;
 

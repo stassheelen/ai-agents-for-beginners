@@ -18,7 +18,14 @@ import { DEFAULT_OG_IMAGE } from "@/lib/seo";
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  openGraph: { siteName: "VELLA", locale: "uk_UA", type: "website", images: [DEFAULT_OG_IMAGE] },
+  openGraph: {
+    siteName: "VELLA",
+    locale: "uk_UA",
+    type: "website",
+    images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: "VELLA — сучасний activewear та базовий гардероб" }],
+  },
+  // Large preview cards (Telegram, X, Viber) instead of a small square thumbnail.
+  twitter: { card: "summary_large_image" },
 };
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
