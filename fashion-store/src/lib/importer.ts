@@ -360,6 +360,14 @@ export async function parseFile(
     if (data.shortDescription) data.shortDescription = textFromHtml(data.shortDescription);
     rows.push(...expandSizes({ row: r + 1, data }));
   }
+  // Price lists without a supplier column: the site the photos come from is the supplier
+  // (as for XML feeds), and the row's own article is the supplier's article.
+  if (!map.includes("supplier")) {
+    for (const r of rows) r.data.supplier ??= supplierHostOf(r.data.images);
+  }
+  if (!map.includes("supplierSku")) {
+    for (const r of rows) if (r.data.supplier) r.data.supplierSku ??= r.data.parentSku ?? r.data.sku;
+  }
   if (rows.length > MAX_ROWS)
     throw new Error(`Забагато рядків після розбиття розмірів (${rows.length}, максимум ${MAX_ROWS}). Розділіть файл.`);
   return { rows, unknownColumns };
@@ -413,6 +421,18 @@ function rowError(d: Partial<Record<Field, string>>): string | null {
       return `Некоректне посилання на фото: "${url}"`;
   }
   return null;
+}
+
+/** Host of the first photo link ("sollorini.com.ua"), unless it is the store's own storage. */
+function supplierHostOf(images?: string): string | undefined {
+  const first = splitImages(images)[0];
+  if (!first || !/^https?:\/\//i.test(first)) return undefined;
+  try {
+    const host = new URL(first).hostname.replace(/^www\./, "");
+    return /(r2\.dev|r2\.cloudflarestorage\.com|vercel-storage\.com|vella\.top)$/i.test(host) ? undefined : host;
+  } catch {
+    return undefined;
+  }
 }
 
 function splitImages(v?: string) {
