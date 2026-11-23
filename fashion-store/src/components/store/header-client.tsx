@@ -18,19 +18,28 @@ import { cn } from "@/lib/utils";
 import type { NavItem } from "@/lib/nav";
 import { useStore } from "./store-context";
 
+type HeaderProps = { items: NavItem[]; storeName: string };
+
+/**
+ * Reads the catalogue flag (?flag=new …) to highlight the current menu item.
+ * useSearchParams needs a Suspense boundary on cached pages, so SiteHeader
+ * renders <HeaderClient flag={null}> as the fallback in the prerendered HTML.
+ */
+export function HeaderWithParams(props: HeaderProps) {
+  const flag = useSearchParams().get("flag");
+  return <HeaderClient {...props} flag={flag} />;
+}
+
 export function HeaderClient({
   items,
   storeName,
-}: {
-  items: NavItem[];
-  storeName: string;
-}) {
+  flag,
+}: HeaderProps & { flag: string | null }) {
   const { cart, setCartOpen, setSearchOpen, wishlist } = useStore();
   const [active, setActive] = React.useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [prevPath, setPrevPath] = React.useState(pathname);
@@ -126,9 +135,7 @@ export function HeaderClient({
   };
 
   const activeItem = active !== null ? items[active] : null;
-  const current =
-    pathname +
-    (searchParams.get("flag") ? `?flag=${searchParams.get("flag")}` : "");
+  const current = pathname + (flag ? `?flag=${flag}` : "");
   // "/shop" is the parent of every catalog URL, so it only counts as current on an exact match.
   const isCurrent = (href: string) =>
     current === href ||

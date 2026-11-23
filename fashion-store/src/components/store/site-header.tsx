@@ -1,6 +1,7 @@
 import { buildNav } from "@/lib/nav";
 import { getSettings } from "@/lib/queries";
-import { HeaderClient } from "./header-client";
+import { Suspense } from "react";
+import { HeaderClient, HeaderWithParams } from "./header-client";
 import { AnnouncementBar } from "./announcement-bar";
 
 export async function SiteHeader() {
@@ -8,7 +9,9 @@ export async function SiteHeader() {
   return (
     <>
       <AnnouncementBar items={announcements} />
-      <HeaderClient items={items} storeName={settings.storeName} />
+      <Suspense fallback={<HeaderClient items={items} storeName={settings.storeName} flag={null} />}>
+        <HeaderWithParams items={items} storeName={settings.storeName} />
+      </Suspense>
     </>
   );
 }

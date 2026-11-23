@@ -12,10 +12,16 @@ const PAGES = {
 
 type Slug = keyof typeof PAGES;
 
+export function generateStaticParams() {
+  return (Object.keys(PAGES) as Slug[]).map((slug) => ({ slug }));
+}
+
 export async function generateMetadata(props: PageProps<"/help/[slug]">): Promise<Metadata> {
   const { slug } = await props.params;
   const page = PAGES[slug as Slug];
-  return page ? { title: page.title, alternates: { canonical: `/help/${slug}` } } : { title: "Не знайдено" };
+  return page
+    ? { title: page.title, description: `${page.title} в інтернет-магазині VELLA.`, alternates: { canonical: `/help/${slug}` } }
+    : { title: "Не знайдено" };
 }
 
 export default async function HelpPage(props: PageProps<"/help/[slug]">) {

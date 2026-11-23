@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DEFAULT_OG_IMAGE, listingSeoDescription, withoutStoreSuffix } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { CatalogView } from "@/components/store/catalog-view";
 import { parseCatalogParams } from "@/lib/catalog-params";
@@ -10,9 +11,13 @@ export async function generateMetadata(props: PageProps<"/shop/[slug]">): Promis
   const cat = await getCategoryBySlug(slug);
   if (!cat) return { title: "Не знайдено" };
   return {
-    title: cat.seoTitle ?? cat.name,
-    description: cat.seoDescription ?? cat.description ?? undefined,
-    openGraph: { title: cat.seoTitle ?? cat.name, description: cat.seoDescription ?? cat.description ?? undefined, images: cat.image ? [cat.image] : undefined },
+    title: withoutStoreSuffix(cat.seoTitle ?? cat.name),
+    description: listingSeoDescription(cat.name, cat.seoDescription ?? cat.description),
+    openGraph: {
+      title: withoutStoreSuffix(cat.seoTitle ?? cat.name),
+      description: listingSeoDescription(cat.name, cat.seoDescription ?? cat.description),
+      images: [cat.image ?? DEFAULT_OG_IMAGE],
+    },
     alternates: { canonical: `/shop/${slug}` },
   };
 }

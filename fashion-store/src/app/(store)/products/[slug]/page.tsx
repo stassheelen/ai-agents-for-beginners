@@ -10,16 +10,24 @@ import { ProductJsonLd } from "@/components/store/json-ld";
 import { BackButton } from "@/components/store/back-button";
 import { Stars } from "@/components/store/price";
 import { formatDate, sortSizes } from "@/lib/utils";
+import { DEFAULT_OG_IMAGE, productSeoDescription, productSeoTitle } from "@/lib/seo";
+
+// Pages are rendered on first visit and then served from cache (see the store layout's revalidate).
+export function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata(props: PageProps<"/products/[slug]">): Promise<Metadata> {
   const { slug } = await props.params;
   const p = await getProductBySlug(slug);
   if (!p) return { title: "Товар не знайдено" };
-  const image = p.ogImage ?? p.images[0]?.url;
+  const image = p.ogImage ?? p.images[0]?.url ?? DEFAULT_OG_IMAGE;
+  const title = productSeoTitle(p);
+  const description = productSeoDescription(p);
   return {
-    title: p.seoTitle ?? p.name,
-    description: p.seoDescription ?? p.shortDescription ?? undefined,
-    openGraph: { title: p.seoTitle ?? p.name, description: p.seoDescription ?? p.shortDescription ?? undefined, images: image ? [image] : undefined },
+    title,
+    description,
+    openGraph: { title, description, images: [image] },
     alternates: { canonical: `/products/${p.slug}` },
   };
 }
@@ -39,10 +47,10 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
     <div className="pb-24 lg:pb-0">
       <ProductJsonLd
         name={product.name}
-        description={product.shortDescription ?? product.description}
+        description={productSeoDescription(product)}
         images={product.images.map((i) => i.url)}
         sku={product.sku}
-        brand={product.brand}
+        brand={settings.storeName}
         price={product.price}
         currency={product.currency}
         inStock={product.variants.some((v) => v.stock > 0)}

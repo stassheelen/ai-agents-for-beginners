@@ -4,13 +4,14 @@ import { getHomepageSections, getSettings } from "@/lib/queries";
 import { RenderSection } from "@/components/store/sections/render-section";
 import { OrganizationJsonLd } from "@/components/store/json-ld";
 import { Button } from "@/components/ui/button";
+import { DEFAULT_OG_IMAGE } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
   return {
     title: { absolute: s.seoTitle ?? s.storeName },
     description: s.seoDescription ?? undefined,
-    openGraph: { title: s.seoTitle ?? s.storeName, description: s.seoDescription ?? undefined, images: s.ogImage ? [s.ogImage] : undefined, type: "website" },
+    openGraph: { title: s.seoTitle ?? s.storeName, description: s.seoDescription ?? undefined, images: [s.ogImage ?? DEFAULT_OG_IMAGE], type: "website" },
     alternates: { canonical: "/" },
   };
 }
@@ -29,7 +30,15 @@ export default async function HomePage() {
           </Button>
         </section>
       ) : (
-        sections.map((s, i) => <RenderSection key={s.id} section={s} index={i} />)
+        <>
+          {/* A hero with a title renders the page's H1; without one, give search engines a hidden H1. */}
+          {!sections.some((s) => s.type === "HERO" && s.title) && (
+            <h1 className="sr-only">{settings.seoTitle ?? settings.storeName}</h1>
+          )}
+          {sections.map((s, i) => (
+            <RenderSection key={s.id} section={s} index={i} />
+          ))}
+        </>
       )}
     </>
   );
