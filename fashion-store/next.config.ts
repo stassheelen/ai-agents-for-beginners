@@ -5,6 +5,15 @@ const extraHosts = (process.env.IMAGE_REMOTE_HOSTS ?? "")
   .map((h) => h.trim())
   .filter(Boolean);
 
+const MIRROR_HOSTS = [
+  "vella-ua.vercel.app",
+  "vellabrand.vercel.app",
+  "vellastore.vercel.app",
+  "vella-store.vercel.app",
+  "vella-eight-teal.vercel.app",
+  "vella-msvt1.vercel.app",
+];
+
 const nextConfig: NextConfig = {
   images: {
     // Photos are served as stored (resized to WEBP on upload): the hosting plan's image-optimisation quota
@@ -21,6 +30,17 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "2mb" },
   },
   poweredByHeader: false,
+  // Old *.vercel.app names of the production site serve the same pages as vella.top;
+  // send visitors and search engines to the one address. Per-deployment and branch
+  // URLs are not listed, so previews keep working.
+  async redirects() {
+    return MIRROR_HOSTS.map((host) => ({
+      source: "/:path*",
+      has: [{ type: "host" as const, value: host }],
+      destination: "https://vella.top/:path*",
+      permanent: true,
+    }));
+  },
   async headers() {
     return [
       {
