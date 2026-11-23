@@ -28,10 +28,10 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/admin", label: "Огляд", icon: LayoutDashboard },
+  { href: "/admin/orders", label: "Замовлення", icon: ShoppingCart },
   { href: "/admin/products", label: "Товари", icon: Package },
   { href: "/admin/categories", label: "Категорії", icon: FolderTree },
   { href: "/admin/collections", label: "Колекції", icon: Layers },
-  { href: "/admin/orders", label: "Замовлення", icon: ShoppingCart },
   { href: "/admin/customers", label: "Клієнти", icon: Users },
   { href: "/admin/homepage", label: "Головна сторінка", icon: Home },
   { href: "/admin/banners", label: "Банери", icon: Megaphone },
@@ -44,7 +44,18 @@ const NAV = [
 
 export const AdminConfig = React.createContext({ directUpload: false });
 
-export function AdminShell({ admin, directUpload, children }: { admin: { email: string; name: string | null; role: string }; directUpload: boolean; children: React.ReactNode }) {
+export function AdminShell({
+  admin,
+  directUpload,
+  newOrders,
+  children,
+}: {
+  admin: { email: string; name: string | null; role: string };
+  directUpload: boolean;
+  /** Orders still in status NEW, shown as a badge next to "Замовлення". */
+  newOrders: number;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
   const [prevPath, setPrevPath] = React.useState(pathname);
@@ -65,6 +76,14 @@ export function AdminShell({ admin, directUpload, children }: { admin: { email: 
           >
             <item.icon className="size-4" strokeWidth={1.6} />
             {item.label}
+            {item.href === "/admin/orders" && newOrders > 0 && (
+              <span
+                className={cn("ml-auto min-w-5 rounded-full px-1.5 text-center text-[11px] font-medium leading-5", active ? "bg-white text-foreground" : "bg-foreground text-white")}
+                aria-label={`Нових замовлень: ${newOrders}`}
+              >
+                {newOrders}
+              </span>
+            )}
           </Link>
         );
       })}

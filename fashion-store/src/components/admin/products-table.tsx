@@ -150,9 +150,9 @@ export function ProductsTable({ products, page, pages }: { products: Row[]; page
                 </Link>
                 {p.flags.length > 0 && <p className="mt-0.5 text-[11px] text-muted-foreground">{p.flags.join(" · ")}</p>}
               </TD>
-              <TD className="font-mono text-[12px] text-muted-foreground">{p.sku}</TD>
+              <TD className="whitespace-nowrap font-mono text-[12px] text-muted-foreground">{p.sku}</TD>
               <TD className="text-muted-foreground">{p.category || "—"}</TD>
-              <TD className="text-right">{formatMoney(p.price, p.currency)}</TD>
+              <TD className="whitespace-nowrap text-right">{formatMoney(p.price, p.currency)}</TD>
               <TD className="text-right">
                 <span className={p.stock === 0 ? "text-destructive" : p.stock <= 5 ? "text-[#9a6200]" : ""}>{p.stock}</span>
                 <span className="block text-[11px] text-muted-foreground">{p.variants} вар.</span>
