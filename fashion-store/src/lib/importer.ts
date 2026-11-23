@@ -101,13 +101,13 @@ const ALIASES: Record<Field, string[]> = {
     "артикултовару",
   ],
   name: ["productname", "name", "title", "назва", "назватовару"],
-  category: ["category", "категорія"],
+  category: ["category", "категорія", "основнакатегорія"],
   subcategory: ["subcategory", "підкатегорія"],
   collection: ["collection", "collections", "колекція"],
-  color: ["color", "colour", "колір"],
+  color: ["color", "colour", "колір", "базовийколір"],
   colorHex: ["colorhex", "hex", "colourhex", "кодкольору"],
-  size: ["size", "розмір"],
-  price: ["price", "sellingprice", "ціна"],
+  size: ["size", "розмір", "розмірвиробника", "розміри"],
+  price: ["price", "sellingprice", "ціна", "цінароздрібнагрн", "цінароздрібна", "роздрібнаціна", "цінагрн"],
   compareAt: [
     "compareprice",
     "compareatprice",
@@ -116,7 +116,7 @@ const ALIASES: Record<Field, string[]> = {
     "ціназастарою",
   ],
   cost: ["cost", "costprice", "собівартість"],
-  stock: ["stock", "qty", "quantity", "inventory", "залишок", "кількість"],
+  stock: ["stock", "qty", "quantity", "inventory", "залишок", "кількість", "наявність"],
   description: ["description", "опис"],
   shortDescription: ["shortdescription", "короткийопис"],
   images: [
@@ -125,12 +125,13 @@ const ALIASES: Record<Field, string[]> = {
     "images",
     "imageurls",
     "фото",
+    "фототовару",
     "фотоurl",
     "зображення",
   ],
   status: ["status", "статус"],
   tags: ["tags", "теги"],
-  material: ["material", "склад", "матеріал"],
+  material: ["material", "склад", "матеріал", "матеріалверху"],
   care: ["care", "careinstructions", "догляд"],
   brand: ["brand", "бренд"],
   seoTitle: ["seotitle", "seoзаголовок"],
@@ -143,7 +144,63 @@ const ALIASES: Record<Field, string[]> = {
   supplierUrl: ["supplierurl", "vendorurl", "посиланняпостачальника", "посиланнянатоварпостачальника"],
 };
 
+const ALIAS_FIELDS: Record<string, true> = Object.fromEntries(Object.values(ALIASES).flat().map((a) => [a, true]));
 const norm = (h: string) => h.toLowerCase().replace(/[^a-zа-яіїєґ0-9]/gi, "");
+
+/**
+ * Marketplace exports (Rozetka, Prom) mark headers with "*" for required, "(select)" / "(text)" for the
+ * field type and "[ua]" / "[ru]" for the language: "Назва товару* [ua]", "Бренд* (select)". Those marks
+ * are dropped before matching; when a field comes in both languages the Ukrainian column wins.
+ */
+const cleanHeader = (h: string) => h.replace(/\[[a-z]{2}\]/gi, " ").replace(/\([^)]*\)/g, " ").replace(/\*/g, " ");
+const headerLangRank = (h: string) => (/\[ua\]/i.test(h) ? 2 : /\[ru\]/i.test(h) ? 0 : 1);
+
+/** Stock given as words ("в наявності", "немає в наявності") instead of a number. */
+const IN_STOCK_DEFAULT = "10";
+function stockFromText(v: string): string {
+  const t = v.trim().toLowerCase();
+  if (!t || /^-?\d+$/.test(t.replace(/\s/g, ""))) return v;
+  if (/(немає|нема|нет|відсутн|отсутств|закінчи|законч|out of stock|unavailable)/.test(t)) return "0";
+  if (/(наявн|наличи|в продажу|є|есть|available|in stock|так|yes)/.test(t)) return IN_STOCK_DEFAULT;
+  return v;
+}
+
+/** Supplier descriptions often arrive as (escaped) HTML; keep the text with its paragraph breaks. */
+function textFromHtml(v: string): string {
+  if (!/[<&]/.test(v)) return v;
+  const decode = (s: string) =>
+    s
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#0?39;|&apos;/gi, "'")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&");
+  const html = decode(decode(v));
+  if (!/<[a-z!/]/i.test(html)) return html.trim();
+  return html
+    .replace(/<\s*(br|\/p|\/div|\/li|\/h[1-6])\s*\/?>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/**
+ * One row listing several sizes ("38;40;39;37;36") becomes one row per size: variant SKU "<sku>-<size>",
+ * grouped under the original SKU as the parent.
+ */
+function expandSizes(row: ParsedRow): ParsedRow[] {
+  const sizes = (row.data.size ?? "").split(/[;,]/).map((x) => x.trim()).filter(Boolean);
+  if (sizes.length < 2 || !row.data.sku) return [row];
+  const unique = [...new Set(sizes)].sort((a, b) => (Number(a) && Number(b) ? Number(a) - Number(b) : a.localeCompare(b)));
+  return unique.map((size) => ({
+    row: row.row,
+    data: { ...row.data, size, sku: `${row.data.sku}-${size}`, parentSku: row.data.parentSku ?? row.data.sku },
+  }));
+}
 
 const COLOR_HEX: Record<string, string> = {
   black: "#1c1c1c",
@@ -272,13 +329,19 @@ export async function parseFile(
 
   const header = table[0].map((h) => String(h ?? ""));
   const map: (Field | null)[] = header.map((h) => {
-    const n = norm(h);
+    const n = norm(cleanHeader(h));
     return (
       (Object.keys(ALIASES) as Field[]).find((f) => ALIASES[f].includes(n)) ??
       null
     );
   });
-  const unknownColumns = header.filter((h, i) => h.trim() && !map[i]);
+  // The same field in two languages: keep the Ukrainian column ([ua] > unmarked > [ru]).
+  map.forEach((f, i) => {
+    if (!f) return;
+    const better = map.some((g, j) => j !== i && g === f && headerLangRank(header[j]) > headerLangRank(header[i]));
+    if (better) map[i] = null;
+  });
+  const unknownColumns = header.filter((h, i) => h.trim() && !map[i] && !(norm(cleanHeader(h)) in ALIAS_FIELDS));
   if (!map.includes("sku"))
     throw new Error("Відсутня обовʼязкова колонка: Артикул (SKU)");
   if (!map.includes("name"))
@@ -292,8 +355,13 @@ export async function parseFile(
       if (f) data[f] = String(cell ?? "").trim();
     });
     if (Object.values(data).every((v) => !v)) continue;
-    rows.push({ row: r + 1, data });
+    if (data.stock) data.stock = stockFromText(data.stock);
+    if (data.description) data.description = textFromHtml(data.description);
+    if (data.shortDescription) data.shortDescription = textFromHtml(data.shortDescription);
+    rows.push(...expandSizes({ row: r + 1, data }));
   }
+  if (rows.length > MAX_ROWS)
+    throw new Error(`Забагато рядків після розбиття розмірів (${rows.length}, максимум ${MAX_ROWS}). Розділіть файл.`);
   return { rows, unknownColumns };
 }
 
@@ -348,9 +416,11 @@ function rowError(d: Partial<Record<Field, string>>): string | null {
 }
 
 function splitImages(v?: string) {
-  return (v ?? "")
-    .split(/[\s,|;]+/)
-    .map((s) => s.trim())
+  const raw = v ?? "";
+  // "a.jpg;b (2).jpg": with ";", "|" or line breaks as separators, spaces belong to the file names.
+  const parts = /[;|\n]/.test(raw) ? raw.split(/[;|\n]+/) : raw.split(/[\s,]+/);
+  return parts
+    .map((s) => s.trim().replace(/ /g, "%20"))
     .filter(Boolean);
 }
 
