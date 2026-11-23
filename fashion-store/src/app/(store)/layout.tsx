@@ -7,6 +7,7 @@ import { CartDrawer } from "@/components/store/cart-drawer";
 import { QuickAdd } from "@/components/store/quick-add";
 import { SearchOverlay } from "@/components/store/search-overlay";
 import { SmoothScroll } from "@/components/store/smooth-scroll";
+import { BackgroundWordmark } from "@/components/store/background-wordmark";
 import { getSettings } from "@/lib/queries";
 import { Toaster } from "sonner";
 import { DEFAULT_OG_IMAGE } from "@/lib/seo";
@@ -28,7 +29,8 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <style>{`:root{--accent:${accent}}`}</style>
       <div className="flex min-h-dvh flex-col">
         <SiteHeader />
-        <main className="flex-1">
+        <main className="relative isolate flex-1">
+          <BackgroundWordmark />
           {/* Page content fades between routes; header and footer stay put (globals.css → page-fade). */}
           <ViewTransition default="page-fade">{children}</ViewTransition>
         </main>

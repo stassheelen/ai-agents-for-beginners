@@ -239,3 +239,31 @@ a:hover > .logo-shine {
     animation: none !important;
   }
 }
+
+/* Background wordmark (components/store/background-wordmark.tsx): giant VELLA rows behind the page.
+   --sy is the scroll position; the layer moves down at 35% of it, so the letters scroll slower than the content. */
+.bg-wordmark-layer {
+  --sy: 0;
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(140px, 38vh, 420px);
+  padding-top: 18vh;
+  transform: translate3d(0, calc(var(--sy) * 0.35px), 0);
+  will-change: transform;
+}
+.bg-wordmark-row {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(120px, 30vw, 520px);
+  line-height: 0.8;
+  letter-spacing: -0.06em;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--foreground) 3.5%, transparent);
+  transform: translate3d(calc(var(--sy) * -0.06px), 0, 0);
+}
+.bg-wordmark-row[data-dir="right"] {
+  transform: translate3d(calc(var(--sy) * 0.06px), 0, 0);
+}
