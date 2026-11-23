@@ -28,9 +28,9 @@ export async function buildNav(): Promise<{ items: NavItem[]; announcements: { i
         {
           title: "Новинки",
           links: [
-            { label: "Нові надходження", href: "/shop?flag=new" },
-            { label: "У тренді", href: "/shop?flag=featured" },
-            { label: "Нові колекції", href: "/collections" },
+            ...(nav.flags.new ? [{ label: "Нові надходження", href: "/shop?flag=new" }] : []),
+            ...(nav.flags.featured ? [{ label: "У тренді", href: "/shop?flag=featured" }] : []),
+            ...(nav.collections.length ? [{ label: "Нові колекції", href: "/collections" }] : []),
           ],
         },
         ...(nav.collections.length ? [{ title: "Колекції", links: nav.collections.map((c) => ({ label: c.name, href: `/collections/${c.slug}` })) }] : []),
@@ -47,8 +47,8 @@ export async function buildNav(): Promise<{ items: NavItem[]; announcements: { i
           title: "Магазин",
           links: [
             { label: "Усі товари", href: "/shop" },
-            { label: "Бестселери", href: "/shop?flag=bestseller" },
-            { label: "Розпродаж", href: "/shop?flag=sale" },
+            ...(nav.flags.bestseller ? [{ label: "Бестселери", href: "/shop?flag=bestseller" }] : []),
+            ...(nav.flags.sale ? [{ label: "Розпродаж", href: "/shop?flag=sale" }] : []),
           ],
         },
         ...nav.categories.map<NavColumn>((cat) => ({
@@ -58,7 +58,10 @@ export async function buildNav(): Promise<{ items: NavItem[]; announcements: { i
       ],
       promos: promos.slice(0, 1),
     },
-    { label: "Розпродаж", href: "/shop?flag=sale", columns: [], promos: [], highlight: true },
+    // Links to flag listings are left out while nothing carries that flag ("Нічого не знайдено" otherwise).
+    ...(nav.flags.sale ? [{ label: "Розпродаж", href: "/shop?flag=sale", columns: [], promos: [], highlight: true }] : []),
   ];
+  // A column whose links were all hidden would show a lone heading.
+  for (const item of items) item.columns = item.columns.filter((col) => col.links.length > 0);
   return { items, announcements: nav.announcements };
 }

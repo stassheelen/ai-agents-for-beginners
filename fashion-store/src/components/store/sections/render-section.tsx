@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   getCategoryTiles,
   getCollectionTiles,
+  getNavigation,
   getProductsBySource,
   type HomepageSectionData,
   type ProductSource,
@@ -36,7 +37,21 @@ function isVideoFile(url: string) {
   return /\.(mp4|webm)(\?|$)/i.test(url);
 }
 
-export async function RenderSection({ section, index }: { section: HomepageSectionData; index: number }) {
+/** True for a link to a flag listing (/shop?flag=sale …) that currently has no products. */
+function emptyFlagLink(href: string | null | undefined, flags: Record<string, boolean>) {
+  const flag = href?.match(/^\/shop\?(?:.*&)?flag=([a-z]+)/)?.[1];
+  return Boolean(flag && flag in flags && !flags[flag]);
+}
+
+export async function RenderSection({ section: raw, index }: { section: HomepageSectionData; index: number }) {
+  // Promos for an empty listing (e.g. a sale banner with nothing on sale) are hidden, and buttons to it dropped.
+  const { flags } = await getNavigation();
+  if (raw.type === "BANNER" && emptyFlagLink(raw.buttonLink, flags)) return null;
+  const section = {
+    ...raw,
+    ...(emptyFlagLink(raw.buttonLink, flags) ? { buttonLink: null, buttonLabel: null } : {}),
+    ...(emptyFlagLink(raw.button2Link, flags) ? { button2Link: null, button2Label: null } : {}),
+  };
   const c = cfg(section);
   switch (section.type) {
     case "HERO":

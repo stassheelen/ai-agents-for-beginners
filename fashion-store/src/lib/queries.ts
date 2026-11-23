@@ -31,7 +31,7 @@ export type NavCategory = { id: string; name: string; slug: string; children: { 
 export const getNavigation = unstable_cache(
   async () => {
     const now = new Date();
-    const [categories, collections, colors, megaBanners, announcements] = await Promise.all([
+    const [categories, collections, colors, megaBanners, announcements, newCount, featuredCount, bestsellerCount, saleCount] = await Promise.all([
       prisma.category.findMany({
         where: { parentId: null, published: true, showInNav: true },
         orderBy: { position: "asc" },
@@ -66,8 +66,20 @@ export const getNavigation = unstable_cache(
         orderBy: { position: "asc" },
         select: { id: true, title: true, link: true },
       }),
+      // How many listed products carry each flag, so menus can hide links to empty listings.
+      prisma.product.count({ where: { ...LISTED, isNew: true } }),
+      prisma.product.count({ where: { ...LISTED, featured: true } }),
+      prisma.product.count({ where: { ...LISTED, bestSeller: true } }),
+      prisma.product.count({ where: { ...LISTED, onSale: true } }),
     ]);
-    return { categories: categories as NavCategory[], collections, colors: colors.map((c) => ({ ...c, name: ukLabel(c.name) })), megaBanners, announcements };
+    return {
+      categories: categories as NavCategory[],
+      collections,
+      colors: colors.map((c) => ({ ...c, name: ukLabel(c.name) })),
+      megaBanners,
+      announcements,
+      flags: { new: newCount > 0, featured: featuredCount > 0, bestseller: bestsellerCount > 0, sale: saleCount > 0 },
+    };
   },
   ["navigation"],
   CACHE,

@@ -16,12 +16,12 @@ export async function SiteFooter() {
           <div>
             <p className="eyebrow mb-4">Магазин</p>
             <ul className="space-y-2.5 text-sm text-muted-foreground">
-              <li><Link href="/shop?flag=new" className="hover:text-foreground">Новинки</Link></li>
-              <li><Link href="/shop?flag=bestseller" className="hover:text-foreground">Бестселери</Link></li>
+              {nav.flags.new && <li><Link href="/shop?flag=new" className="hover:text-foreground">Новинки</Link></li>}
+              {nav.flags.bestseller && <li><Link href="/shop?flag=bestseller" className="hover:text-foreground">Бестселери</Link></li>}
               {nav.categories.map((c) => (
                 <li key={c.slug}><Link href={`/shop/${c.slug}`} className="hover:text-foreground">{c.name}</Link></li>
               ))}
-              <li><Link href="/shop?flag=sale" className="hover:text-foreground">Розпродаж</Link></li>
+              {nav.flags.sale && <li><Link href="/shop?flag=sale" className="hover:text-foreground">Розпродаж</Link></li>}
             </ul>
           </div>
           <div>

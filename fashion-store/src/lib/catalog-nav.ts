@@ -7,10 +7,10 @@ export async function catalogPills(active: string | null): Promise<Pill[]> {
   const nav = await getNavigation();
   const pills = [
     { key: "all", name: "Усі", href: "/shop" },
-    { key: "new", name: "Новинки", href: "/shop?flag=new" },
-    { key: "bestseller", name: "Бестселери", href: "/shop?flag=bestseller" },
+    ...(nav.flags.new ? [{ key: "new", name: "Новинки", href: "/shop?flag=new" }] : []),
+    ...(nav.flags.bestseller ? [{ key: "bestseller", name: "Бестселери", href: "/shop?flag=bestseller" }] : []),
     ...nav.categories.map((c) => ({ key: c.slug, name: c.name, href: `/shop/${c.slug}` })),
-    { key: "sale", name: "Розпродаж", href: "/shop?flag=sale" },
+    ...(nav.flags.sale ? [{ key: "sale", name: "Розпродаж", href: "/shop?flag=sale" }] : []),
   ];
   return pills.map(({ key, ...p }) => ({ ...p, active: key === active }));
 }
