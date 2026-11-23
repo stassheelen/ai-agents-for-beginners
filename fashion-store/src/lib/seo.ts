@@ -73,7 +73,10 @@ export function productSeoDescription(p: ProductSeoInput) {
     if (isUkrainianText(text) && !mentionsAny(text, hidden)) return clip(text);
   }
   const category = (p.subcategory ?? p.category)?.name;
-  const colors = [...new Set(p.variants.map((v) => v.color?.name).filter((c): c is string => Boolean(c)))].slice(0, 3);
+  // Supplier colour names such as "Noir" stay untranslated; only Cyrillic ones go into the text.
+  const colors = [
+    ...new Set(p.variants.map((v) => v.color?.name).filter((c): c is string => Boolean(c && /[Ѐ-ӿ]/.test(c)))),
+  ].slice(0, 3);
   const parts = [
     `${p.name}${category ? ` — ${category.toLowerCase()}` : ""}${colors.length ? `, ${colors.join(", ").toLowerCase()}` : ""}, VELLA.`,
     `Ціна ${formatMoney(p.price, p.currency)}.`,
