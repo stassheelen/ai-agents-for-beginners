@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageSuffix } from "@/lib/seo";
 import { CatalogView } from "@/components/store/catalog-view";
 import { FLAG_TITLES, parseCatalogParams } from "@/lib/catalog-params";
 import { catalogPills } from "@/lib/catalog-nav";
@@ -9,7 +10,7 @@ export async function generateMetadata(props: PageProps<"/shop">): Promise<Metad
   return {
     title: flag ?? "Усі товари",
     description: "Каталог VELLA: activewear, худі, світшоти, легінси та аксесуари.",
-    alternates: { canonical: flag ? `/shop?flag=${sp.flag}` : "/shop" },
+    alternates: { canonical: flag ? `/shop?flag=${sp.flag}${pageSuffix(sp, "&")}` : `/shop${pageSuffix(sp)}` },
   };
 }
 

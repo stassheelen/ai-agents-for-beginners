@@ -90,3 +90,10 @@ export function listingSeoDescription(name: string, stored?: string | null) {
   if (isUkrainianText(stored)) return clip(stored);
   return clip(`${name} в інтернет-магазині VELLA. Нові моделі, актуальні ціни, доставка Новою Поштою по Україні, обмін і повернення 14 днів.`);
 }
+
+/** "?page=N" suffix for a listing's canonical URL; page 1 has none. */
+export function pageSuffix(sp: Record<string, string | string[] | undefined>, joiner: "?" | "&" = "?") {
+  const raw = Array.isArray(sp.page) ? sp.page[0] : sp.page;
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 1 && n <= 50 ? `${joiner}page=${n}` : "";
+}

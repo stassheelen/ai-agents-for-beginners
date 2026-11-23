@@ -401,6 +401,16 @@ export function CatalogGrid({ initial, hasMore: initialHasMore, params, total }:
   const [hasMore, setHasMore] = React.useState(initialHasMore);
   const [page, setPage] = React.useState(params.page ?? 1);
   const [loading, setLoading] = React.useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const pageHref = (n: number) => {
+    const sp = new URLSearchParams(searchParams.toString());
+    if (n > 1) sp.set("page", String(n));
+    else sp.delete("page");
+    const qs = sp.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  };
+  const firstPage = params.page ?? 1;
   const sentinel = React.useRef<HTMLDivElement>(null);
   const gridRef = useReveal<HTMLDivElement>(items.length);
 
@@ -452,16 +462,26 @@ export function CatalogGrid({ initial, hasMore: initialHasMore, params, total }:
         <div className="h-px w-48 bg-muted">
           <div className="h-full bg-foreground" style={{ width: `${Math.min(100, (items.length / Math.max(total, 1)) * 100)}%` }} />
         </div>
+        {firstPage > 1 && (
+          <a href={pageHref(firstPage - 1)} className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">
+            Попередні товари
+          </a>
+        )}
         {hasMore && (
-          <Button
-            variant="outline"
-            onClick={() => {
-              setAuto(true);
-              void loadMore();
-            }}
-            disabled={loading}
-          >
-            {loading && <Loader2 className="animate-spin" />} Завантажити ще
+          // A real link to the next page, so search engines can reach every product;
+          // in the browser it loads the next page in place instead.
+          <Button variant="outline" asChild>
+            <a
+              href={pageHref(page + 1)}
+              aria-disabled={loading}
+              onClick={(e) => {
+                e.preventDefault();
+                setAuto(true);
+                void loadMore();
+              }}
+            >
+              {loading && <Loader2 className="animate-spin" />} Завантажити ще
+            </a>
           </Button>
         )}
       </div>

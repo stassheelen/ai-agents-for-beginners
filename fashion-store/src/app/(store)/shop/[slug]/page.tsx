@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DEFAULT_OG_IMAGE, listingSeoDescription, withoutStoreSuffix } from "@/lib/seo";
+import { DEFAULT_OG_IMAGE, listingSeoDescription, pageSuffix, withoutStoreSuffix } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { CatalogView } from "@/components/store/catalog-view";
 import { parseCatalogParams } from "@/lib/catalog-params";
@@ -7,7 +7,7 @@ import { getCategoryBySlug } from "@/lib/queries";
 import { catalogPills } from "@/lib/catalog-nav";
 
 export async function generateMetadata(props: PageProps<"/shop/[slug]">): Promise<Metadata> {
-  const { slug } = await props.params;
+  const [{ slug }, sp] = await Promise.all([props.params, props.searchParams]);
   const cat = await getCategoryBySlug(slug);
   if (!cat) return { title: "Не знайдено" };
   return {
@@ -18,7 +18,7 @@ export async function generateMetadata(props: PageProps<"/shop/[slug]">): Promis
       description: listingSeoDescription(cat.name, cat.seoDescription ?? cat.description),
       images: [cat.image ?? DEFAULT_OG_IMAGE],
     },
-    alternates: { canonical: `/shop/${slug}` },
+    alternates: { canonical: `/shop/${slug}${pageSuffix(sp)}` },
   };
 }
 

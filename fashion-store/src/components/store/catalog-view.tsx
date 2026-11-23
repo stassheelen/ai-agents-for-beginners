@@ -48,7 +48,9 @@ export async function CatalogView({
   subnav?: { name: string; href: string; active?: boolean }[];
 }) {
   const merged: CatalogParams = { ...params, ...Object.fromEntries(Object.entries(scope).filter(([, v]) => v !== undefined)) };
-  const [catalog, facets] = await Promise.all([getCatalog({ ...merged, page: 1 }), getCatalogFacets(scope)]);
+  // ?page=N renders that page of the listing; the "load more" link points to it so crawlers reach every product.
+  const page = merged.page ?? 1;
+  const [catalog, facets] = await Promise.all([getCatalog({ ...merged, page }), getCatalogFacets(scope)]);
   const hide = { category: false, collection: Boolean(scope.collection) };
   const gridKey = JSON.stringify(merged);
 
@@ -90,7 +92,7 @@ export async function CatalogView({
             <CatalogToolbar total={catalog.total} facets={facets} hide={hide} />
           </Suspense>
           <div className="mt-6 lg:mt-8">
-            <CatalogGrid key={gridKey} initial={catalog.items} hasMore={catalog.hasMore} params={{ ...merged, page: 1 }} total={catalog.total} />
+            <CatalogGrid key={gridKey} initial={catalog.items} hasMore={catalog.hasMore} params={{ ...merged, page }} total={catalog.total} />
           </div>
         </div>
       </div>
