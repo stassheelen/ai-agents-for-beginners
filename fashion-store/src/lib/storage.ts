@@ -5,6 +5,8 @@ import path from "node:path";
 import crypto from "node:crypto";
 import sharp from "sharp";
 import { AwsClient } from "aws4fetch";
+import net from "node:net";
+import { lookup } from "node:dns/promises";
 import { prisma } from "@/lib/db";
 
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -23,6 +25,39 @@ const VIDEO_TYPES: Record<string, string> = {
 };
 
 export class UploadError extends Error {}
+
+/** True for loopback, private, link-local, CGNAT and unique-local addresses (IPv4 and IPv6). */
+function isPrivateAddress(ip: string): boolean {
+  const v4 = ip.startsWith("::ffff:") ? ip.slice(7) : ip;
+  if (net.isIPv4(v4)) {
+    const [a, b] = v4.split(".").map(Number);
+    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224;
+  }
+  const v6 = ip.toLowerCase();
+  return v6 === "::" || v6 === "::1" || v6.startsWith("fc") || v6.startsWith("fd") || v6.startsWith("fe80");
+}
+
+/**
+ * Server-side fetch of a user-supplied URL (feeds, images by link). Every hop is checked: the host must
+ * resolve only to public addresses, and redirects are followed by hand (at most 5) so a public URL
+ * cannot bounce the request into a private network.
+ */
+export async function fetchPublicUrl(rawUrl: string | URL, init: RequestInit = {}): Promise<Response> {
+  let url = new URL(rawUrl);
+  for (let hop = 0; hop <= 5; hop++) {
+    assertPublicHttpUrl(url);
+    const host = url.hostname.replace(/^\[|\]$/g, "");
+    const addresses = net.isIP(host) ? [host] : (await lookup(host, { all: true }).catch(() => [])).map((a) => a.address);
+    if (!addresses.length) throw new UploadError(`Не вдалося знайти сервер: ${url.hostname}`);
+    if (addresses.some(isPrivateAddress)) throw new UploadError("Посилання на приватну мережу заборонені");
+    const res = await fetch(url, { ...init, redirect: "manual" });
+    if (res.status < 300 || res.status >= 400) return res;
+    const location = res.headers.get("location");
+    if (!location) return res;
+    url = new URL(location, url);
+  }
+  throw new UploadError("Забагато переадресацій");
+}
 
 /** Only public http(s) URLs: blocks localhost and private / link-local networks (SSRF guard for server-side fetches). */
 export function assertPublicHttpUrl(url: URL) {
@@ -188,7 +223,7 @@ export async function importRemoteFile(rawUrl: string, alt?: string) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(url, { signal: controller.signal, redirect: "follow" });
+    const res = await fetchPublicUrl(url, { signal: controller.signal });
     if (!res.ok) throw new UploadError(`Не вдалося завантажити (${res.status}): ${rawUrl}`);
     const len = Number(res.headers.get("content-length") || 0);
     if (len > MAX_IMAGE_BYTES) throw new UploadError("Зображення за посиланням більше 8 МБ");

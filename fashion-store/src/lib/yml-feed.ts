@@ -1,7 +1,7 @@
 import "server-only";
 import { SaxesParser } from "saxes";
 import type { Field, ParsedRow } from "@/lib/importer";
-import { assertPublicHttpUrl } from "@/lib/storage";
+import { assertPublicHttpUrl, fetchPublicUrl } from "@/lib/storage";
 import { classifyProduct } from "@/lib/category-groups";
 import { roundPriceMajor } from "@/lib/utils";
 
@@ -250,7 +250,7 @@ export async function fetchFeed(rawUrl: string): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 60_000);
   try {
-    const res = await fetch(url, { signal: controller.signal, redirect: "follow", headers: { accept: "application/xml,text/xml,*/*" }, cache: "no-store" });
+    const res = await fetchPublicUrl(url, { signal: controller.signal, headers: { accept: "application/xml,text/xml,*/*" }, cache: "no-store" });
     if (!res.ok) throw new Error(`Фід недоступний (${res.status})`);
     if (Number(res.headers.get("content-length") || 0) > FEED_MAX_BYTES) throw new Error("Фід більше 50 МБ");
     const text = await res.text();

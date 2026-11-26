@@ -50,6 +50,11 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // No framing by other sites, no <base> hijacking, no plugins, forms only to the store and LiqPay.
+          {
+            key: "Content-Security-Policy",
+            value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self' https://www.liqpay.ua",
+          },
         ],
       },
       { source: "/demo/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },

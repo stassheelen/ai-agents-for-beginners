@@ -35,8 +35,11 @@ export const liqpay: PaymentProvider = {
     if (!data || !signature) return null;
     const expected = sign(data);
     if (expected.length !== signature.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) return null;
-    const json = JSON.parse(Buffer.from(data, "base64").toString("utf8")) as { order_id: string; status: string; payment_id?: number };
-    const status = ["success", "sandbox"].includes(json.status) ? "PAID" : ["failure", "error", "reversed"].includes(json.status) ? "FAILED" : "PENDING";
-    return { orderId: json.order_id, status, ref: json.payment_id ? String(json.payment_id) : undefined };
+    const json = JSON.parse(Buffer.from(data, "base64").toString("utf8")) as { order_id: string; status: string; payment_id?: number; amount?: number | string; currency?: string };
+    // Test ("sandbox") payments count as paid only while LIQPAY_SANDBOX=1 is set for testing.
+    const paidStatuses = process.env.LIQPAY_SANDBOX === "1" ? ["success", "sandbox"] : ["success"];
+    const status = paidStatuses.includes(json.status) ? "PAID" : ["failure", "error", "reversed"].includes(json.status) ? "FAILED" : "PENDING";
+    const amount = json.amount === undefined ? undefined : Math.round(Number(json.amount) * 100);
+    return { orderId: json.order_id, status, ref: json.payment_id ? String(json.payment_id) : undefined, amount, currency: json.currency };
   },
 };

@@ -16,5 +16,6 @@ export interface PaymentProvider {
   isConfigured(): boolean;
   createPayment(order: Order, ctx: { resultUrl: string; callbackUrl: string }): Promise<PaymentInit>;
   /** Verify a provider callback; return the order id + new status, or null if invalid. */
-  handleCallback?(body: Record<string, string>): Promise<{ orderId: string; status: "PAID" | "FAILED" | "PENDING"; ref?: string } | null>;
+  /** Verifies a server-to-server notification. `amount` (minor units) and `currency` are checked against the order when given. */
+  handleCallback?(body: Record<string, string>): Promise<{ orderId: string; status: "PAID" | "FAILED" | "PENDING"; ref?: string; amount?: number; currency?: string } | null>;
 }
